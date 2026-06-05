@@ -181,7 +181,7 @@ else:
     with col_kpi2:
         st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ أرباح معلقة في التوصيل / Pending Cash:<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
 
-    # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي ثنائي اللغة
+    # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي ثنائي اللغة (تم إصلاح الاقتباس والإزاحة مئة بالمئة)
     st.markdown("<br><div style='background:#5c2575; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>💎 لوحة التقارير المالية التفصيلية لطلبيات الحزمة / Detailed Financial Statement</b></div>", unsafe_allow_html=True)
     
     table_rows = ""
