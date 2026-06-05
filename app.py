@@ -13,22 +13,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# دالة تحويل النصوص العربية للرسم البياني
-def fix_arabic(text):
-    return str(text)
-
 # دالة تطهير الإيموجي للرسم
 def clean_emojis_for_chart(text_str):
     return re.sub(r'[^\w\s\(\)\-\/:]', '', str(text_str)).strip()
-
-# دالة تحديد ألوان الحالات لبطاقات الأداء
-def get_color_style(status_text):
-    st_str = str(status_text).strip().lower()
-    if any(k in st_str for k in ['تسليم', 'تم', 'done', 'delivered', 'مستلم']):
-        return 'linear-gradient(135deg, #2ecc71, #117a65)', '#e8f8f5'
-    elif any(k in st_str for k in ['شحن', 'طريق', 'مندوب', 'shipping', 'shipped', 'route']):
-        return 'linear-gradient(135deg, #e67e22, #b9770e)', '#fef5e7'
-    return 'linear-gradient(135deg, #3498db, #2471a3)', '#eaf2f8'
 
 # دالة الأيقونات الذكية للبطاقات
 def get_icon(col_name):
@@ -68,9 +55,13 @@ if not df.empty:
     name_col = name_cols[0] if name_cols else df.columns[1]
     clean_all = df[df[id_c].fillna('').astype(str).str.strip().str.startswith('D-')].dropna(subset=[id_c]).copy()
     clean_all[st_c] = clean_all[st_c].fillna('').astype(str).str.strip()
+    
     t_cols = [c for c in df.columns if "تاريخ" in c or "Timestamp" in c or "Date" in c]
-    date_col = 'parsed_dt' if t_cols else None
-    if t_cols: clean_all['parsed_dt'] = pd.to_datetime(clean_all[t_cols[0]], errors='coerce')
+    date_col = 'parsed_date_only' if t_cols else None
+    if t_cols:
+        # تحويل التاريخ بمرونة تامة لاستيعاب كل الصيغ واستخراج اليوم فقط
+        clean_all['parsed_dt'] = pd.to_datetime(clean_all[t_cols[0]], errors='coerce')
+        clean_all['parsed_date_only'] = clean_all['parsed_dt'].dt.date
 
 # تنسيق الواجهة عبر CSS
 st.markdown("""
@@ -114,7 +105,7 @@ if 'Single' in mode:
     if not matching_rows.empty:
         row = matching_rows.iloc[0]
         for col in df.columns:
-            if "رابط" in col or col == 'parsed_dt' or "Unnamed" in str(col) or "Product type" in col: continue
+            if "رابط" in col or col == 'parsed_date_only' or "parsed_dt" in col or "Unnamed" in str(col) or "Product type" in col: continue
             val = row[col]
             v_str = str(val).strip() if pd.notna(val) else '—'
             
@@ -154,19 +145,23 @@ else:
     clean_status_val = str(selected_status).replace('✔', '').replace('🟢', '').replace('🟠', '').replace('🔵', '').strip()
     tbl = clean_all[clean_all[st_c].str.contains(clean_status_val, na=False, case=False)].copy()
     
-    now_utc = datetime.datetime.now(datetime.timezone.utc)
-    libya_now = now_utc + datetime.timedelta(hours=2)
-    today_start = datetime.datetime(libya_now.year, libya_now.month, libya_now.day, 0, 0, 0)
-    today_end = datetime.datetime(libya_now.year, libya_now.month, libya_now.day, 23, 59, 59)
-    start_of_week = today_start - datetime.timedelta(days=7)
+    # حساب تاريخ اليوم الحالي بتوقيت ليبيا الفعلي ومقارنة التواريخ المجردة بدون الساعات
+    today_date = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=2)).date()
+    start_of_week_date = today_date - datetime.timedelta(days=7)
+    
     period_data = clean_all.copy()
 
     if date_col and not tbl.empty:
-        if 'Today' in selected_time: tbl = tbl[(tbl[date_col] >= today_start) & (tbl[date_col] <= today_end)]
-        elif 'This Week' in selected_time: tbl = tbl[(tbl[date_col] >= start_of_week) & (tbl[date_col] <= today_end)]
+        if 'Today' in selected_time: 
+            tbl = tbl[tbl[date_col] == today_date]
+        elif 'This Week' in selected_time: 
+            tbl = tbl[(tbl[date_col] >= start_of_week_date) & (tbl[date_col] <= today_date)]
+            
     if date_col and not period_data.empty:
-        if 'Today' in selected_time: period_data = period_data[(period_data[date_col] >= today_start) & (period_data[date_col] <= today_end)]
-        elif 'This Week' in selected_time: period_data = period_data[(period_data[date_col] >= start_of_week) & (period_data[date_col] <= today_end)]
+        if 'Today' in selected_time: 
+            period_data = period_data[period_data[date_col] == today_date]
+        elif 'This Week' in selected_time: 
+            period_data = period_data[(period_data[date_col] >= start_of_week_date) & (period_data[date_col] <= today_date)]
 
     grp_o = len(tbl.drop_duplicates(subset=[id_c]))
     tbl_delivered_unique = tbl[tbl[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
@@ -213,68 +208,4 @@ else:
         books_summary_str = " + ".join(row_books) if row_books else "مبيعات متنوعة / Misc Items"
         table_rows += f"""
         <tr>
-            <td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'><span style='background:#eaf2f8; color:#2471a3; padding:4px 8px; border-radius:4px; font-weight:bold;'>{order_code}</span></td>
-            <td style='padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold;'>{customer_name}</td>
-            <td style='padding:10px; border-bottom:1px solid #eee; text-align:right; color:#5c2575; font-weight:bold;'>{books_summary_str}</td>
-            <td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'><span style='background:#e8f8f5; color:#117a65; padding:4px 8px; border-radius:4px; font-weight:bold;'>{order_price:,.0f} LYD</span></td>
-        </tr>
-        """
-    
-    if grand_total_rev > 0:
-        table_rows += f"""
-        <tr style='background-color:#ebdef0; font-weight:bold; color:#5c2575;'>
-            <td colspan='3' style='padding:12px; text-align:right;'>📊 إجمالي صافي إيرادات الخزينة الكلية لهذه الحزمة / Total Net Revenue for Current Package</td>
-            <td style='padding:12px; text-align:center;'><span style='background:#7d3c98; color:white; padding:5px 12px; border-radius:4px;'>{grand_total_rev:,.0f} LYD</span></td>
-        </tr>
-        """
-        html_table = f"""
-        <table style='width:100%; border-collapse:collapse; margin-top:10px; font-family:tahoma; direction:rtl; box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'>
-            <thead>
-                <tr style='background-color:#5c2575; color:white;'>
-                    <th style='padding:12px; text-align:right;'>🆔 كود الطلبية / Order Code</th>
-                    <th style='padding:12px; text-align:right;'>👤 اسم الزبون / Name</th>
-                    <th style='padding:12px; text-align:right;'>📚 مواصفات الحزمة / Package Details</th>
-                    <th style='padding:12px; text-align:center;'>💰 إجمالي السعر / Net Price</th>
-                </tr>
-            </thead>
-            <tbody>{table_rows}</tbody>
-        </table>
-        """
-        st.markdown(html_table, unsafe_allow_html=True)
-    else:
-        st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لا توجد طلبيات مسجلة في هذا النطاق حالياً / No orders recorded.</div>", unsafe_allow_html=True)
-
-    # 3️⃣ التقرير الثالث: توزيع المبيعات الرسومية والبيانات الإحصائية باللغة الإنجليزية السليمة
-    st.markdown("<br>", unsafe_allow_html=True)
-    col_chart1, col_chart2 = st.columns(2)
-    
-    with col_chart1:
-        if received_sales > 0 or pending_sales > 0:
-            fig1, ax1 = plt.subplots(figsize=(6, 4))
-            ax1.pie([received_sales, pending_sales], labels=['Received Revenue', 'Pending Revenue'], 
-                    autopct=lambda p: f'{(p/100)*(received_sales+pending_sales):,.0f} LYD\n({p:.1f}%)' if p > 0 else '',
-                    startangle=140, colors=['#2ecc71', '#e67e22'], textprops={'fontsize':9, 'weight':'bold'})
-            ax1.set_title("Financial Cashflow Distribution (LYD)", fontsize=10, weight='bold', color='#5c2575', pad=15)
-            st.pyplot(fig1)
-            
-    with col_chart2:
-        raw_counts = period_data.drop_duplicates(subset=[id_c])[st_c].replace('', 'Other')
-        status_counts = raw_counts.apply(clean_emojis_for_chart).value_counts()
-        if not status_counts.empty:
-            fig2, ax2 = plt.subplots(figsize=(6, 4))
-            
-            # تحويل أسماء الحالات في الرسم البياني للإنجليزية لضمان المظهر الصحيح
-            english_labels = []
-            for label in status_counts.index:
-                lbl_clean = str(label).strip()
-                if 'تسليم' in lbl_clean or 'تم' in lbl_clean: english_labels.append('Delivered')
-                elif 'شحن' in lbl_clean or 'طريق' in lbl_clean: english_labels.append('Shipping')
-                elif 'تجهيز' in lbl_clean or 'انتظار' in lbl_clean: english_labels.append('Preparing')
-                else: english_labels.append('Pending')
-                
-            bars = ax2.bar(english_labels, status_counts.values, color=['#2ecc71' if x == 'Delivered' else '#e67e22' for x in english_labels], width=0.4, zorder=3)
-            ax2.set_title("Operational Workspace Load (Orders Count)", fontsize=10, weight='bold', color='#5c2575', pad=15)
-            ax2.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
-            for bar in bars:
-                ax2.text(bar.get_x() + bar.get_width()/2.0, bar.get_height() + 0.05, f'{int(bar.get_height())}', ha='center', va='bottom', weight='bold')
-            st.pyplot(fig2)
+            <td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'><span style='background:#eaf2f8; color:#2471a3; padding:4px 8px; border
