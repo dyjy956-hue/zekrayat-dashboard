@@ -1,4 +1,4 @@
-import streamlit as st
+ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import datetime
@@ -7,7 +7,7 @@ import re
 
 # إعدادات الصفحة الافتراضية لواجهة الويب الفاخرة
 st.set_page_config(
-    page_title="لوحة تحكم متجر ذكريات",
+    page_title="لوحة تحكم متجر ذكريات / Zekrayat Dashboard",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -71,7 +71,7 @@ if not df.empty:
     date_col = 'parsed_dt' if t_cols else None
     if t_cols: clean_all['parsed_dt'] = pd.to_datetime(clean_all[t_cols[0]], errors='coerce')
 
-# تنسيق أزرار الاختيار عبر CSS لتكون ضخمة جداً ومريحة للعين
+# تنسيق أزرار الاختيار عبر CSS لتكون ضخمة ومريحة للعين وبخطوط تنفيذية
 st.markdown("""
     <style>
         .stRadio [data-testid="stMarkdownContainer"] p {
@@ -84,11 +84,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<div style='background-color:#2c3e50; padding:15px; border-radius:10px; text-align:center; color:white; font-family:tahoma; margin-bottom:20px;'><h2>📊 لوحة التحكم التنفيذية - متجر ذكريات الفاخر</h2></div>", unsafe_allow_html=True)
-st.sidebar.markdown("<div style='background-color:#5c2575; padding:8px; color:white; text-align:center; font-weight:bold; border-radius:4px;'>⚙️ لوحة الفرز والملاحة</div>", unsafe_allow_html=True)
+st.markdown("<div style='background-color:#2c3e50; padding:15px; border-radius:10px; text-align:center; color:white; font-family:tahoma; margin-bottom:20px;'><h2>📊 لوحة التحكم التنفيذية - متجر ذكريات الفاخر / Zekrayat Store Dashboard</h2></div>", unsafe_allow_html=True)
+st.sidebar.markdown("<div style='background-color:#5c2575; padding:8px; color:white; text-align:center; font-weight:bold; border-radius:4px;'>⚙️ لوحة الفرز والملاحة / Control Panel</div>", unsafe_allow_html=True)
 
 mode = st.sidebar.radio(
-    "اختر وضع العرض المطلوب:",
+    "اختر وضع العرض المطلوب / Select View Mode:",
     ['🔍 تفاصيل طلبية واحدة / Single Order Inquiry', '📊 عرض المجموعات والتقارير / Executive Analytics']
 )
 
@@ -98,15 +98,15 @@ if st.sidebar.button("🔄 تحديث حياً وجلب البيانات الف�
     st.rerun()
 
 if 'Single' in mode:
-    selected_id = st.sidebar.selectbox("اختر كود الطلب المستهدف:", clean_ids)
+    selected_id = st.sidebar.selectbox("اختر كود الطلب المستهدف / Select Order Code:", clean_ids)
     
     delivered_global_mask = clean_all[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)
     tot_o = len(clean_all.drop_duplicates(subset=[id_c]))
     unique_delivered = clean_all[delivered_global_mask].drop_duplicates(subset=[id_c])
     tot_m = pd.to_numeric(unique_delivered[p_col], errors='coerce').fillna(0).sum()
     
-    st.markdown(f"<div style='background:linear-gradient(135deg, #5c2575, #7d3c98); padding:14px; color:white; text-align:right; font-family:tahoma; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1);'><b>📊 إجمالي الطلبات الفريدة بالمنظومة: {tot_o} | 💰 مبيعات الخزينة الكلية المحققة: {tot_m:,} LYD</b></div>", unsafe_allow_html=True)
-    st.markdown(f"<div style='background:#2c3e50; padding:10px; color:white; text-align:right; margin-top:10px; border-radius:6px; font-family:tahoma;'><b>📌 تفاصيل كود الطلب الحالي: {selected_id}</b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background:linear-gradient(135deg, #5c2575, #7d3c98); padding:14px; color:white; text-align:right; font-family:tahoma; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1);'><b>📊 إجمالي الطلبات الفريدة بالمنظومة / Total Orders: {tot_o} | 💰 مبيعات الخزينة الكلية المحققة / Total Cash: {tot_m:,} LYD</b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background:#2c3e50; padding:10px; color:white; text-align:right; margin-top:10px; border-radius:6px; font-family:tahoma;'><b>📌 تفاصيل كود الطلب الحالي / Current Order: {selected_id}</b></div>", unsafe_allow_html=True)
     st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
     
     matching_rows = df[df[id_c].fillna('').astype(str).str.strip() == str(selected_id).strip()]
@@ -147,8 +147,8 @@ if 'Single' in mode:
             """, unsafe_allow_html=True)
 
 else:
-    selected_status = st.sidebar.selectbox("اختر حالة المجموعة للتصفية:", clean_statuses)
-    selected_time = st.sidebar.selectbox("اختر النطاق الزمني للتقرير:", ['كل الأوقات (All)', 'طلبات اليوم فقط (Today)', 'طلبات هذا الأسبوع (This Week)'])
+    selected_status = st.sidebar.selectbox("اختر حالة المجموعة بالتصفية / Filter by Status:", clean_statuses)
+    selected_time = st.sidebar.selectbox("اختر النطاق الزمني للتقرير / Select Period:", ['كل الأوقات / All Times (All)', 'طلبات اليوم فقط / Today Only (Today)', 'طلبات هذا الأسبوع / This Week Only (This Week)'])
     
     clean_status_val = str(selected_status).replace('✔', '').replace('🟢', '').replace('🟠', '').replace('🔵', '').strip()
     tbl = clean_all[clean_all[st_c].str.contains(clean_status_val, na=False, case=False)].copy()
@@ -178,17 +178,17 @@ else:
 
     clean_time_display = clean_emojis_for_chart(selected_time)
 
-    # 1️⃣ التقرير الأول: كشف التدفق النقدي الفوري
-    st.markdown(f"<div style='background:#e67e22; padding:10px; color:white; text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>📋 كشف الأداء: {selected_status} ({clean_time_display}) | العدد: {grp_o} طلبيات | القيمة: {grp_m:,} LYD 💰</div>", unsafe_allow_html=True)
+    # 1️⃣ التقرير الأول: كشف التدفق النقدي الفوري ثنائي اللغة
+    st.markdown(f"<div style='background:#e67e22; padding:10px; color:white; text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>📋 كشف الأداء / Performance KPIs: {selected_status} ({clean_time_display}) | العدد / Count: {grp_o} | القيمة / Revenue: {grp_m:,} LYD 💰</div>", unsafe_allow_html=True)
     
     col_kpi1, col_kpi2 = st.columns(2)
     with col_kpi1:
-        st.markdown(f"<div style='background:#2ecc71; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>💵 أرباح مستلمة فعلياً بالخزينة:<br><span style='font-size:20px;'>{received_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#2ecc71; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>💵 أرباح مستلمة فعلياً بالخزينة / Received Cash:<br><span style='font-size:20px;'>{received_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
     with col_kpi2:
-        st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ أرباح معلقة في التوصيل:<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ أرباح معلقة في التوصيل / Pending Cash:<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
 
-    # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي
-    st.markdown("<br><div style='background:#5c2575; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>💎 لوحة التقارير المالية التفصيلية لطلبيات الحزمة</b></div>", unsafe_allow_html=True)
+    # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي ثنائي اللغة
+    st.markdown("<br><div style='background:#5c2575; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>💎 لوحة التقارير المالية التفصيلية لطلبيات الحزمة / Detailed Financial Statement</b></div>", unsafe_allow_html=True)
     
     table_rows = ""
     grand_total_rev = 0
@@ -209,7 +209,7 @@ else:
                     b_title = m_head.group(1).strip() if m_head else col_b
                     row_books.append(f"{b_title} ({int(float(b_val))})")
 
-        books_summary_str = " + ".join(row_books) if row_books else "مبيعات متنوعة"
+        books_summary_str = " + ".join(row_books) if row_books else "مبيعات متنوعة / Misc Items"
         table_rows += f"""
         <tr>
             <td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'><span style='background:#eaf2f8; color:#2471a3; padding:4px 8px; border-radius:4px; font-weight:bold;'>{order_code}</span></td>
@@ -222,7 +222,7 @@ else:
     if grand_total_rev > 0:
         table_rows += f"""
         <tr style='background-color:#ebdef0; font-weight:bold; color:#5c2575;'>
-            <td colspan='3' style='padding:12px; text-align:right;'>📊 إجمالي صافي إيرادات الخزينة الكلية لهذه الحزمة المعروضة حالياً</td>
+            <td colspan='3' style='padding:12px; text-align:right;'>📊 إجمالي صافي إيرادات الخزينة الكلية لهذه الحزمة / Total Net Revenue for Current Package</td>
             <td style='padding:12px; text-align:center;'><span style='background:#7d3c98; color:white; padding:5px 12px; border-radius:4px;'>{grand_total_rev:,.0f} LYD</span></td>
         </tr>
         """
@@ -230,10 +230,10 @@ else:
         <table style='width:100%; border-collapse:collapse; margin-top:10px; font-family:tahoma; direction:rtl; box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'>
             <thead>
                 <tr style='background-color:#5c2575; color:white;'>
-                    <th style='padding:12px; text-align:right;'>🆔 كود الطلبية</th>
-                    <th style='padding:12px; text-align:right;'>👤 اسم الزبون</th>
-                    <th style='padding:12px; text-align:right;'>📚 مواصفات الحزمة المطلوب</th>
-                    <th style='padding:12px; text-align:center;'>💰 إجمالي السعر الصافي</th>
+                    <th style='padding:12px; text-align:right;'>🆔 كود الطلبية / Order Code</th>
+                    <th style='padding:12px; text-align:right;'>👤 اسم الزبون / Name</th>
+                    <th style='padding:12px; text-align:right;'>📚 مواصفات الحزمة / Package Details</th>
+                    <th style='padding:12px; text-align:center;'>💰 إجمالي السعر / Net Price</th>
                 </tr>
             </thead>
             <tbody>{table_rows}</tbody>
@@ -241,7 +241,7 @@ else:
         """
         st.markdown(html_table, unsafe_allow_html=True)
     else:
-        st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لا توجد طلبيات مسجلة في هذا النطاق حالياً.</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لا توجد طلبيات مسجلة في هذا النطاق حالياً / No orders recorded.</div>", unsafe_allow_html=True)
 
     # 3️⃣ التقرير الثالث: توزيع المبيعات الرسومية والبيانات الإحصائية
     st.markdown("<br>", unsafe_allow_html=True)
