@@ -59,7 +59,6 @@ if not df.empty:
     t_cols = [c for c in df.columns if "تاريخ" in c or "Timestamp" in c or "Date" in c]
     date_col = 'parsed_date_only' if t_cols else None
     if t_cols:
-        # تحويل التاريخ بمرونة تامة لاستيعاب كل الصيغ واستخراج اليوم فقط
         clean_all['parsed_dt'] = pd.to_datetime(clean_all[t_cols[0]], errors='coerce')
         clean_all['parsed_date_only'] = clean_all['parsed_dt'].dt.date
 
@@ -124,88 +123,4 @@ if 'Single' in mode:
                 if match: clean_display_header = match.group(1).strip()
 
             if col == st_c:
-                val_element = f"<span style='background:#e8f8f5; color:#117a65; padding:6px 14px; border-radius:20px; font-weight:bold; border:1px solid #117a65; font-size:12px;'>{v_str} 🟢</span>"
-            else:
-                clr = '#117a65' if col == p_col else '#2c3e50'
-                fsz = '14px' if col == p_col else '13px'
-                val_element = f"<span style='color:{clr}; font-weight:bold; font-size:{fsz}; font-family:tahoma;'>{v_str}</span>"
-            
-            st.markdown(f"""
-            <div style="direction: ltr; text-align: left; padding: 12px 16px; margin-bottom: 8px; background: #ffffff; border-left: 5px solid #5c2575; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center;">
-                <div style="font-size: 16px; margin-right: 12px;">{ico}</div>
-                <div style="min-width: 220px; color: #7f8c8d; font-weight: bold; font-family: tahoma; font-size: 13px;">{clean_display_header}</div>
-                <div style="flex-grow: 1;">{val_element}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-else:
-    selected_status = st.sidebar.selectbox("اختر حالة المجموعة بالتصفية / Filter by Status:", clean_statuses)
-    selected_time = st.sidebar.selectbox("اختر النطاق الزمني للتقرير / Select Period:", ['كل الأوقات / All Times (All)', 'طلبات اليوم فقط / Today Only (Today)', 'طلبات هذا الأسبوع / This Week Only (This Week)'])
-    
-    clean_status_val = str(selected_status).replace('✔', '').replace('🟢', '').replace('🟠', '').replace('🔵', '').strip()
-    tbl = clean_all[clean_all[st_c].str.contains(clean_status_val, na=False, case=False)].copy()
-    
-    # حساب تاريخ اليوم الحالي بتوقيت ليبيا الفعلي ومقارنة التواريخ المجردة بدون الساعات
-    today_date = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=2)).date()
-    start_of_week_date = today_date - datetime.timedelta(days=7)
-    
-    period_data = clean_all.copy()
-
-    if date_col and not tbl.empty:
-        if 'Today' in selected_time: 
-            tbl = tbl[tbl[date_col] == today_date]
-        elif 'This Week' in selected_time: 
-            tbl = tbl[(tbl[date_col] >= start_of_week_date) & (tbl[date_col] <= today_date)]
-            
-    if date_col and not period_data.empty:
-        if 'Today' in selected_time: 
-            period_data = period_data[period_data[date_col] == today_date]
-        elif 'This Week' in selected_time: 
-            period_data = period_data[(period_data[date_col] >= start_of_week_date) & (period_data[date_col] <= today_date)]
-
-    grp_o = len(tbl.drop_duplicates(subset=[id_c]))
-    tbl_delivered_unique = tbl[tbl[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
-    grp_m = pd.to_numeric(tbl_delivered_unique[p_col], errors='coerce').fillna(0).sum()
-
-    delivered_unique_period = period_data[period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
-    pending_unique_period = period_data[~period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
-    received_sales = pd.to_numeric(delivered_unique_period[p_col], errors='coerce').fillna(0).sum()
-    pending_sales = pd.to_numeric(pending_unique_period[p_col], errors='coerce').fillna(0).sum()
-
-    clean_time_display = clean_emojis_for_chart(selected_time)
-
-    # 1️⃣ التقرير الأول: كشف التدفق النقدي الفوري ثنائي اللغة
-    st.markdown(f"<div style='background:#e67e22; padding:10px; color:white; text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>📋 كشف الأداء / Performance KPIs: {selected_status} ({clean_time_display}) | العدد / Count: {grp_o} | القيمة / Revenue: {grp_m:,} LYD 💰</div>", unsafe_allow_html=True)
-    
-    col_kpi1, col_kpi2 = st.columns(2)
-    with col_kpi1:
-        st.markdown(f"<div style='background:#2ecc71; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>💵 أرباح مستلمة فعلياً بالخزينة / Received Cash:<br><span style='font-size:20px;'>{received_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
-    with col_kpi2:
-        st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ أرباح معلقة في التوصيل / Pending Cash:<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
-
-    # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي ثنائي اللغة
-    st.markdown("<br><div style='background:#5c2575; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>💎 لوحة التقارير المالية التفصيلية لطلبيات الحزمة / Detailed Financial Statement</b></div>", unsafe_allow_html=True)
-    
-    table_rows = ""
-    grand_total_rev = 0
-    target_orders = tbl.drop_duplicates(subset=[id_c])
-
-    for idx, row in target_orders.iterrows():
-        order_code = str(row[id_c]).strip()
-        customer_name = str(row[name_col]).strip() if name_col else "—"
-        order_price = pd.to_numeric(row[p_col], errors='coerce') or 0
-        grand_total_rev += order_price
-
-        row_books = []
-        for col_b in clean_all.columns:
-            if "Book type" in col_b or "نوع الكتاب" in col_b:
-                b_val = str(row[col_b]).strip()
-                if b_val not in ["0", "0.0", "0.00", "", "—", "nan", "NaN"]:
-                    m_head = re.search(r'\[(.*?)\]', col_b)
-                    b_title = m_head.group(1).strip() if m_head else col_b
-                    row_books.append(f"{b_title} ({int(float(b_val))})")
-
-        books_summary_str = " + ".join(row_books) if row_books else "مبيعات متنوعة / Misc Items"
-        table_rows += f"""
-        <tr>
-            <td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'><span style='background:#eaf2f8; color:#2471a3; padding:4px 8px; border
+                val_element =
