@@ -103,24 +103,3 @@ if 'Single' in mode:
     matching_rows = df[df[id_c].fillna('').astype(str).str.strip() == str(selected_id).strip()]
     if not matching_rows.empty:
         row = matching_rows.iloc[0]
-        for col in df.columns:
-            if "رابط" in col or col == 'parsed_date_only' or "parsed_dt" in col or "Unnamed" in str(col) or "Product type" in col: continue
-            val = row[col]
-            v_str = str(val).strip() if pd.notna(val) else '—'
-            
-            if "book type" in col.lower() or "نوع الكتاب" in col or "كتاب" in col or "ألبوم" in col:
-                try:
-                    num_check = float(v_str)
-                    if num_check == 0: continue
-                    v_str = f"{int(num_check)}"
-                except:
-                    if v_str in ["0", "0.0", "0.00", "", "—", "nan", "NaN"]: continue
-            
-            ico = get_icon(col)
-            clean_display_header = col.replace('Book type', '').strip()
-            if "[" in col and "]" in col:
-                match = re.search(r'\[(.*?)\]', col)
-                if match: clean_display_header = match.group(1).strip()
-
-            if col == st_c:
-                val_element =
