@@ -244,17 +244,17 @@ else:
     else:
         st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لا توجد طلبيات مسجلة في هذا النطاق حالياً / No orders recorded.</div>", unsafe_allow_html=True)
 
-    # 3️⃣ التقرير الثالث: توزيع المبيعات الرسومية والبيانات الإحصائية باللغة الإنجليزية السليمة
+    # 3️⃣ التقرير الثالث: توزيع المبيعات الرسومية والبيانات الإحصائية
     st.markdown("<br>", unsafe_allow_html=True)
     col_chart1, col_chart2 = st.columns(2)
     
     with col_chart1:
         if received_sales > 0 or pending_sales > 0:
             fig1, ax1 = plt.subplots(figsize=(6, 4))
-            ax1.pie([received_sales, pending_sales], labels=['Received Revenue', 'Pending Revenue'], 
+            ax1.pie([received_sales, pending_sales], labels=['Received', 'Pending'], 
                     autopct=lambda p: f'{(p/100)*(received_sales+pending_sales):,.0f} LYD\n({p:.1f}%)' if p > 0 else '',
                     startangle=140, colors=['#2ecc71', '#e67e22'], textprops={'fontsize':9, 'weight':'bold'})
-            ax1.set_title("Financial Cashflow Distribution (LYD)", fontsize=10, weight='bold', color='#5c2575', pad=15)
+            ax1.set_title(f"Flow Split ({clean_time_display})", fontsize=10, weight='bold', color='#5c2575')
             st.pyplot(fig1)
             
     with col_chart2:
@@ -262,18 +262,8 @@ else:
         status_counts = raw_counts.apply(clean_emojis_for_chart).value_counts()
         if not status_counts.empty:
             fig2, ax2 = plt.subplots(figsize=(6, 4))
-            
-            # تحويل أسماء الحالات في الرسم البياني للإنجليزية لضمان المظهر الصحيح
-            english_labels = []
-            for label in status_counts.index:
-                lbl_clean = str(label).strip()
-                if 'تسليم' in lbl_clean or 'تم' in lbl_clean: english_labels.append('Delivered')
-                elif 'شحن' in lbl_clean or 'طريق' in lbl_clean: english_labels.append('Shipping')
-                elif 'تجهيز' in lbl_clean or 'انتظار' in lbl_clean: english_labels.append('Preparing')
-                else: english_labels.append('Pending')
-                
-            bars = ax2.bar(english_labels, status_counts.values, color=['#2ecc71' if x == 'Delivered' else '#e67e22' for x in english_labels], width=0.4, zorder=3)
-            ax2.set_title("Operational Workspace Load (Orders Count)", fontsize=10, weight='bold', color='#5c2575', pad=15)
+            bars = ax2.bar([x[:10] for x in status_counts.index], status_counts.values, color=['#2ecc71' if 'تسليم' in x or 'تم' in x else '#e67e22' for x in status_counts.index], width=0.4, zorder=3)
+            ax2.set_title(f"Operational Load ({clean_time_display})", fontsize=10, weight='bold', color='#5c2575')
             ax2.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
             for bar in bars:
                 ax2.text(bar.get_x() + bar.get_width()/2.0, bar.get_height() + 0.05, f'{int(bar.get_height())}', ha='center', va='bottom', weight='bold')
