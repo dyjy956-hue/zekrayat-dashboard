@@ -1,4 +1,5 @@
- import streamlit as st
+ # -*- coding: utf-8 -*-
+import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import datetime
@@ -71,7 +72,7 @@ if not df.empty:
     date_col = 'parsed_dt' if t_cols else None
     if t_cols: clean_all['parsed_dt'] = pd.to_datetime(clean_all[t_cols[0]], errors='coerce')
 
-# تنسيق أزرار الاختيار عبر CSS لتكون ضخمة ومريحة للعين وبخطوط تنفيذية
+# تنسيق الواجهة عبر CSS
 st.markdown("""
     <style>
         .stRadio [data-testid="stMarkdownContainer"] p {
