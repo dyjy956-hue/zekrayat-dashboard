@@ -34,27 +34,42 @@ base_url = "https://docs.google.com/spreadsheets/d/1i7lTyW3PIcryPWgdpS8hr_43ZJ1a
 try:
     live_url = f"{base_url}&cache_bust={int(time.time())}"
     df = pd.read_excel(live_url, sheet_name=0) # يقرأ أول تبويب تلقائياً
+    
+    # تحديد الأعمدة بمرونة عالية لمنع الانهيار
     id_c = [c for c in df.columns if "كود" in c or "Code" in c][0]
-    st_c = [c for c in df.columns if "حالة" in c or "Status" in c][0]
+    
+    st_cols = [c for c in df.columns if "حالة" in c or "Status" in c]
+    st_c = st_cols[0] if st_cols else "الحالة"
+    if st_c not in df.columns: df[st_c] = "غير محدد / Unspecified"
+    
     df[id_c] = df[id_c].fillna('').astype(str).str.strip()
     clean_all_temp = df[df[id_c].str.startswith('D-', na=False)]
     clean_ids = sorted([str(x).strip() for x in clean_all_temp[id_c].unique() if str(x).strip() != ''])
-    clean_statuses = sorted([str(x).strip() for x in clean_all_temp[st_c].dropna().unique() if str(x).strip() != ''])
+    
+    # تعبئة الحالات الفارغة بنص افتراضي لتظهر في القائمة الجانبية
+    df[st_c] = df[st_c].fillna("غير محدد / Unspecified").astype(str).str.strip()
+    clean_statuses = sorted([str(x).strip() for x in df[st_c].unique() if str(x).strip() != ''])
 except:
     clean_ids = ['D-ORD-1', 'D-ORD-2', 'D-ORD-3', 'D-ORD-4', 'D-ORD-5', 'D-ORD-6']
-    clean_statuses = ['تسليم', 'قيد الشحن', 'قيد التجهيز']
+    clean_statuses = ['تسليم', 'قيد الشحن', 'قيد التجهيز', 'غير محدد / Unspecified']
     df = pd.DataFrame()
 
 # تصفية وتجهيز الأعمدة
 if not df.empty:
     df = df.loc[:, ~df.columns.astype(str).str.contains('^Unnamed')]
     df = df.dropna(how='all', axis=1)
+    
     p_cols = [c for c in df.columns if "السعر" in c or "الإجمالي" in c or "Price" in c or "Total" in c]
-    p_col = p_cols[0] if p_cols else df.columns[-1]
+    p_col = p_cols[0] if p_cols else "السعر الصافي"
+    if p_col not in df.columns: df[p_col] = 0
+    
     name_cols = [c for c in df.columns if "اسم" in c or "الزبون" in c or "العميل" in c or "Name" in c]
     name_col = name_cols[0] if name_cols else df.columns[1]
-    clean_all = df[df[id_c].fillna('').astype(str).str.strip().str.startswith('D-')].dropna(subset=[id_c]).copy()
-    clean_all[st_c] = clean_all[st_c].fillna('').astype(str).str.strip()
+    
+    # جلب كافة الطلبيات التي تبدأ بـ D- حتى لو كانت بقية خلاياها فارغة
+    clean_all = df[df[id_c].fillna('').astype(str).str.strip().str.startswith('D-')].copy()
+    clean_all[st_c] = clean_all[st_c].fillna("غير محدد / Unspecified").astype(str).str.strip()
+    clean_all[p_col] = pd.to_numeric(clean_all[p_col], errors='coerce').fillna(0)
     
     t_cols = [c for c in df.columns if "تاريخ" in c or "Timestamp" in c or "Date" in c]
     date_col = 'parsed_date_only' if t_cols else None
@@ -94,7 +109,7 @@ if 'Single' in mode:
     delivered_global_mask = clean_all[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)
     tot_o = len(clean_all.drop_duplicates(subset=[id_c]))
     unique_delivered = clean_all[delivered_global_mask].drop_duplicates(subset=[id_c])
-    tot_m = pd.to_numeric(unique_delivered[p_col], errors='coerce').fillna(0).sum()
+    tot_m = unique_delivered[p_col].sum()
     
     st.markdown(f"<div style='background:linear-gradient(135deg, #5c2575, #7d3c98); padding:14px; color:white; text-align:right; font-family:tahoma; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1);'><b>📊 إجمالي الطلبات الفريدة بالمنظومة / Total Orders: {tot_o} | 💰 مبيعات الخزينة الكلية المحققة / Total Cash: {tot_m:,} LYD</b></div>", unsafe_allow_html=True)
     st.markdown(f"<div style='background:#2c3e50; padding:10px; color:white; text-align:right; margin-top:10px; border-radius:6px; font-family:tahoma;'><b>📌 تفاصيل كود الطلب الحالي / Current Order: {selected_id}</b></div>", unsafe_allow_html=True)
@@ -163,16 +178,16 @@ else:
 
     grp_o = len(tbl.drop_duplicates(subset=[id_c]))
     tbl_delivered_unique = tbl[tbl[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
-    grp_m = pd.to_numeric(tbl_delivered_unique[p_col], errors='coerce').fillna(0).sum()
+    grp_m = tbl_delivered_unique[p_col].sum()
 
     delivered_unique_period = period_data[period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
     pending_unique_period = period_data[~period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
-    received_sales = pd.to_numeric(delivered_unique_period[p_col], errors='coerce').fillna(0).sum()
-    pending_sales = pd.to_numeric(pending_unique_period[p_col], errors='coerce').fillna(0).sum()
+    received_sales = delivered_unique_period[p_col].sum()
+    pending_sales = pending_unique_period[p_col].sum()
 
     clean_time_display = clean_emojis_for_chart(selected_time)
 
-    # 1️⃣ التقرير الأول: كشف التدفق النقدي الفوري ثنائي اللغة
+    # 1️⃣ التقرير الأول: كشف التدفق النقدي الفوري
     st.markdown(f"<div style='background:#e67e22; padding:10px; color:white; text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>📋 كشف الأداء / Performance KPIs: {selected_status} ({clean_time_display}) | العدد / Count: {grp_o} | القيمة / Revenue: {grp_m:,} LYD 💰</div>", unsafe_allow_html=True)
     
     col_kpi1, col_kpi2 = st.columns(2)
@@ -181,7 +196,7 @@ else:
     with col_kpi2:
         st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ أرباح معلقة في التوصيل / Pending Cash:<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
 
-    # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي ثنائي اللغة
+    # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي
     st.markdown("<br><div style='background:#5c2575; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>💎 لوحة التقارير المالية التفصيلية لطلبيات الحزمة / Detailed Financial Statement</b></div>", unsafe_allow_html=True)
     
     table_rows = ""
@@ -190,8 +205,8 @@ else:
 
     for idx, row in target_orders.iterrows():
         order_code = str(row[id_c]).strip()
-        customer_name = str(row[name_col]).strip() if name_col else "—"
-        order_price = pd.to_numeric(row[p_col], errors='coerce') or 0
+        customer_name = str(row[name_col]).strip() if name_col and pd.notna(row[name_col]) else "—"
+        order_price = row[p_col]
         grand_total_rev += order_price
 
         row_books = []
@@ -205,14 +220,17 @@ else:
 
         books_summary_str = " + ".join(row_books) if row_books else "مبيعات متنوعة / Misc Items"
         
+        # وضع تنبيه مرئي إذا كان السعر صفراً لتنبيه الإدارة يدوياً
+        price_display = f"{order_price:,.0f} LYD" if order_price > 0 else "⚠️ 0 LYD (Not Set)"
+
         table_rows += f"""<tr>
 <td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'><span style='background:#eaf2f8; color:#2471a3; padding:4px 8px; border-radius:4px; font-weight:bold;'>{order_code}</span></td>
 <td style='padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold;'>{customer_name}</td>
 <td style='padding:10px; border-bottom:1px solid #eee; text-align:right; color:#5c2575; font-weight:bold;'>{books_summary_str}</td>
-<td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'><span style='background:#e8f8f5; color:#117a65; padding:4px 8px; border-radius:4px; font-weight:bold;'>{order_price:,.0f} LYD</span></td>
+<td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'><span style='background:#e8f8f5; color:#117a65; padding:4px 8px; border-radius:4px; font-weight:bold;'>{price_display}</span></td>
 </tr>"""
     
-    if grand_total_rev > 0:
+    if not target_orders.empty:
         total_html_row = f"""<tr style='background-color:#ebdef0; font-weight:bold; color:#5c2575;'>
 <td colspan='3' style='padding:12px; text-align:right;'>📊 إجمالي صافي إيرادات الخزينة الكلية لهذه الحزمة / Total Net Revenue for Current Package</td>
 <td style='padding:12px; text-align:center;'><span style='background:#7d3c98; color:white; padding:5px 12px; border-radius:4px;'>{grand_total_rev:,.0f} LYD</span></td>
@@ -238,7 +256,7 @@ else:
     else:
         st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لا توجد طلبيات مسجلة في هذا النطاق حالياً / No orders recorded.</div>", unsafe_allow_html=True)
 
-    # 3️⃣ التقرير الثالث: الرسوم البيانية باللغة الإنجليزية الصحيحة لتجنب تشوه الخطوط العربية
+    # 3️⃣ التقرير الثالث: الرسوم البيانية
     st.markdown("<br>", unsafe_allow_html=True)
     col_chart1, col_chart2 = st.columns(2)
     
@@ -263,7 +281,7 @@ else:
                 if 'تسليم' in lbl_clean or 'تم' in lbl_clean: english_labels.append('Delivered')
                 elif 'شحن' in lbl_clean or 'طريق' in lbl_clean: english_labels.append('Shipping')
                 elif 'تجهيز' in lbl_clean or 'انتظار' in lbl_clean: english_labels.append('Preparing')
-                else: english_labels.append('Pending')
+                else: english_labels.append('Pending/Unspecified')
                 
             bars = ax2.bar(english_labels, status_counts.values, color=['#2ecc71' if x == 'Delivered' else '#e67e22' for x in english_labels], width=0.4, zorder=3)
             ax2.set_title("Operational Workspace Load (Orders Count)", fontsize=10, weight='bold', color='#5c2575', pad=15)
