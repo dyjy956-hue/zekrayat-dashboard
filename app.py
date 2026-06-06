@@ -33,7 +33,7 @@ def get_icon(col_name):
 base_url = "https://docs.google.com/spreadsheets/d/1i7lTyW3PIcryPWgdpS8hr_43ZJ1aEYHrW0PFl8oxM5Q/export?format=xlsx"
 try:
     live_url = f"{base_url}&cache_bust={int(time.time())}"
-    df = pd.read_excel(live_url, sheet_name=0) # يقرأ أول تبويب تلقائياً
+    df = pd.read_excel(live_url, sheet_name=0)
     
     id_c = [c for c in df.columns if "كود" in c or "Code" in c][0]
     st_cols = [c for c in df.columns if "حالة" in c or "Status" in c]
@@ -46,11 +46,10 @@ try:
     clean_ids = sorted([str(x).strip() for x in clean_all_temp[id_c].unique() if str(x).strip() != ''])
     clean_statuses = sorted([str(x).strip() for x in df[st_c].unique() if str(x).strip() != ''])
 except:
-    clean_ids = ['D-ORD-1', 'D-ORD-2', 'D-ORD-3', 'D-ORD-4', 'D-ORD-5', 'D-ORD-6']
-    clean_statuses = ['تسليم', 'قيد الشحن', 'قيد التجهيز', 'غير محدد / Unspecified']
+    clean_ids = ['D-ORD-1', 'D-ORD-2']
+    clean_statuses = ['تسليم', 'قيد الشحن']
     df = pd.DataFrame()
 
-# تصفية وتجهيز الأعمدة
 if not df.empty:
     df = df.loc[:, ~df.columns.astype(str).str.contains('^Unnamed')]
     df = df.dropna(how='all', axis=1)
@@ -72,7 +71,6 @@ if not df.empty:
         clean_all['parsed_dt'] = pd.to_datetime(clean_all[t_cols[0]], errors='coerce')
         clean_all['parsed_date_only'] = clean_all['parsed_dt'].dt.date
 
-# تنسيق الواجهة عبر CSS
 st.markdown("""
     <style>
         .stRadio [data-testid="stMarkdownContainer"] p {
@@ -93,7 +91,6 @@ mode = st.sidebar.radio(
     ['🔍 تفاصيل طلبية واحدة / Single Order Inquiry', '📊 عرض المجموعات والتقارير / Executive Analytics']
 )
 
-# زر التحديث الحي المباشر من السحاب
 if st.sidebar.button("🔄 تحديث حياً وجلب البيانات الفورية / Live Fetch Sync", use_container_width=True):
     st.cache_data.clear()
     st.rerun()
@@ -171,7 +168,6 @@ else:
         elif 'This Week' in selected_time: 
             period_data = period_data[(period_data[date_col] >= start_of_week_date) & (period_data[date_col] <= today_date)]
 
-    # --- حساب الأعداد الإحصائية للأزرار الملونة ---
     unique_all_period = period_data.drop_duplicates(subset=[id_c])
     count_delivered = len(unique_all_period[unique_all_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)])
     count_shipping = len(unique_all_period[unique_all_period[st_c].str.contains('شحن|طريق|مندوب|Shipping|Shipped', na=False, case=False)])
@@ -198,7 +194,6 @@ else:
 
     clean_time_display = clean_emojis_for_chart(selected_time)
 
-    # 1️⃣ التقرير الأول: كشف التدفق النقدي الفوري
     st.markdown(f"<div style='background:#5c2575; padding:10px; color:white; text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>📋 كشف أداء الحزمة الحالية المستهدفة: {selected_status} ({clean_time_display}) | العدد: {grp_o} | القيمة المستلمة للحزمة: {grp_m:,} LYD 💰</div>", unsafe_allow_html=True)
     
     col_kpi1, col_kpi2 = st.columns(2)
@@ -207,7 +202,6 @@ else:
     with col_kpi2:
         st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ إجمالي أرباح معلقة في التوصيل (للنطاق الحالي):<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
 
-    # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي
     st.markdown("<br><div style='background:#2c3e50; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>💎 لوحة التقارير المالية التفصيلية لطلبيات الحزمة / Detailed Financial Statement</b></div>", unsafe_allow_html=True)
     
     table_rows = ""
@@ -265,7 +259,6 @@ else:
     else:
         st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لا توجد طلبيات مسجلة في هذا النطاق حالياً / No orders recorded.</div>", unsafe_allow_html=True)
 
-    # 3️⃣ التقرير الثالث: الرسوم البيانية الكلية
     st.markdown("<br><div style='background:#5c2575; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📊 الرسوم البيانية والتحليلات المتقدمة للمبيعات / Executive Visual Analytics</b></div>", unsafe_allow_html=True)
     col_chart1, col_chart2 = st.columns(2)
     
@@ -298,14 +291,13 @@ else:
                 ax2.text(bar.get_x() + bar.get_width()/2.0, bar.get_height() + 0.05, f'{int(bar.get_height())}', ha='center', va='bottom', weight='bold')
             st.pyplot(fig2)
 
-    # --- 📊 4️⃣ لوحة صدارة الكتب: حساب المنتج الأكثر طلباً بناءً على كمية المبيعات فقط (بدون سعر) ---
+    # --- 📊 لوحة صدارة الكتب (تطهير كامل من الحروف العربية في الـ Chart) ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("<div style='background:#117a65; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📈 لوحة صدارة الكتب الأكثر طلباً (حسب الوحدات المباعة والمستلمة فقط) / Most Requested Books Leaderboard</b></div>", unsafe_allow_html=True)
     
     book_columns = [c for c in clean_all.columns if "book type" in c.lower() or "نوع الكتاب" in c or "كتاب" in c]
     
     if book_columns and not unique_all_period.empty:
-        # تصفية الطلبيات المستلمة فعلياً
         delivered_only_orders = unique_all_period[unique_all_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)]
         
         book_data_list = []
@@ -313,16 +305,14 @@ else:
             m_head = re.search(r'\[(.*?)\]', col_b)
             arabic_book_name = m_head.group(1).strip() if m_head else col_b.replace('Book type', '').strip()
             
-            # مسميات اللغة الإنجليزية للرسم البياني لمنع التقطع وقلب الحروف
-            english_chart_label = "Misc Item"
+            # فلترة وتحويل صارم للغة الإنجليزية بنسبة 100% لمنع تقطع الحروف نهائياً في الرسم
             if "كبير" in arabic_book_name or "Large" in arabic_book_name: english_chart_label = "Large Book"
             elif "وسط" in arabic_book_name or "Medium" in arabic_book_name: english_chart_label = "Medium Book"
             elif "صغير" in arabic_book_name or "Small" in arabic_book_name: english_chart_label = "Small Book"
             elif "مخمل" in arabic_book_name: english_chart_label = "Velvet Album"
             elif "جلد" in arabic_book_name: english_chart_label = "Leather Album"
-            else: english_chart_label = arabic_book_name
+            else: english_chart_label = "Standard Book" # هنا أزلنا الإسناد العربي التلقائي ليكون إنجليزي نقي
             
-            # حساب إجمالي قطع الوحدات المباعة والمستلمة فقط
             total_qty = pd.to_numeric(delivered_only_orders[col_b], errors='coerce').fillna(0).sum()
             
             if total_qty > 0:
@@ -333,9 +323,7 @@ else:
                 })
         
         if book_data_list:
-            # ترتيب المنتجات تنازلياً حسب الأكثر طلباً (الكمية الأعلى في المرتبة الأولى دائماً)
             df_books = pd.DataFrame(book_data_list).sort_values(by='Quantity', ascending=False)
-            
             col_chart_b, col_table_b = st.columns([3, 2])
             
             with col_chart_b:
@@ -351,7 +339,6 @@ else:
                 st.pyplot(fig3)
                 
             with col_table_b:
-                # الجدول يعرض فقط نوع الكتاب والكمية المطلوبة بالقطع تلبية لطلبك
                 sub_table_rows = ""
                 for idx_b, r_b in df_books.iterrows():
                     sub_table_rows += f"""<tr>
@@ -363,7 +350,7 @@ else:
                 <table style='width:100%; border-collapse:collapse; margin-top:25px; font-family:tahoma; direction:rtl; box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'>
                     <thead>
                         <tr style='background-color:#117a65; color:white;'>
-                            <th style='padding:12px; text-align:right;'>📚 نوع المنتج المنتج الأكثر طلباً</th>
+                            <th style='padding:12px; text-align:right;'>📚 نوع المنتج الأكثر طلباً</th>
                             <th style='padding:12px; text-align:center;'>🔢 إجمالي كمية المبيعات</th>
                         </tr>
                     </thead>
