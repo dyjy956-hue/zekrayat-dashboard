@@ -171,39 +171,19 @@ else:
         elif 'This Week' in selected_time: 
             period_data = period_data[(period_data[date_col] >= start_of_week_date) & (period_data[date_col] <= today_date)]
 
-    # --- 🏗️ حساب الأعداد الإحصائية للأزرار الملونة الجديدة حياً لمنع التداخل ---
+    # --- حساب الأعداد الإحصائية للأزرار الملونة ---
     unique_all_period = period_data.drop_duplicates(subset=[id_c])
-    
     count_delivered = len(unique_all_period[unique_all_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)])
     count_shipping = len(unique_all_period[unique_all_period[st_c].str.contains('شحن|طريق|مندوب|Shipping|Shipped', na=False, case=False)])
     count_preparing = len(unique_all_period[unique_all_period[st_c].str.contains('تجهيز|تحضير|ورشة|Preparing|Process', na=False, case=False)])
     
-    # --- 🎨 بناء واجهة الأزرار الملونة الضخمة العلویة بنظام المربعات التنفيذية ---
     col_btn1, col_btn2, col_btn3 = st.columns(3)
-    
     with col_btn1:
-        st.markdown(f"""
-        <div style='background: linear-gradient(135deg, #2ecc71, #27ae60); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);'>
-            <span style='font-size: 28px; font-weight: bold; display: block;'>{count_delivered}</span>
-            <span style='font-size: 14px; font-family: tahoma; font-weight: bold;'>📦 عدد الطلبات المستلمة / Delivered</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
+        st.markdown(f"<div style='background: linear-gradient(135deg, #2ecc71, #27ae60); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);'><span style='font-size: 28px; font-weight: bold; display: block;'>{count_delivered}</span><span style='font-size: 14px; font-family: tahoma; font-weight: bold;'>📦 عدد الطلبات المستلمة / Delivered</span></div>", unsafe_allow_html=True)
     with col_btn2:
-        st.markdown(f"""
-        <div style='background: linear-gradient(135deg, #e67e22, #d35400); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(230, 126, 34, 0.2);'>
-            <span style='font-size: 28px; font-weight: bold; display: block;'>{count_shipping}</span>
-            <span style='font-size: 14px; font-family: tahoma; font-weight: bold;'>🚚 في الشحن والتوصيل / In Shipping</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
+        st.markdown(f"<div style='background: linear-gradient(135deg, #e67e22, #d35400); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(230, 126, 34, 0.2);'><span style='font-size: 28px; font-weight: bold; display: block;'>{count_shipping}</span><span style='font-size: 14px; font-family: tahoma; font-weight: bold;'>🚚 في الشحن والتوصيل / In Shipping</span></div>", unsafe_allow_html=True)
     with col_btn3:
-        st.markdown(f"""
-        <div style='background: linear-gradient(135deg, #3498db, #2980b9); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);'>
-            <span style='font-size: 28px; font-weight: bold; display: block;'>{count_preparing}</span>
-            <span style='font-size: 14px; font-family: tahoma; font-weight: bold;'>🛠️ طلبات تحت التجهيز / Preparing</span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"<div style='background: linear-gradient(135deg, #3498db, #2980b9); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);'><span style='font-size: 28px; font-weight: bold; display: block;'>{count_preparing}</span><span style='font-size: 14px; font-family: tahoma; font-weight: bold;'>🛠️ طلبات تحت التجهيز / Preparing</span></div>", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -286,7 +266,7 @@ else:
         st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لا توجد طلبيات مسجلة في هذا النطاق حالياً / No orders recorded.</div>", unsafe_allow_html=True)
 
     # 3️⃣ التقرير الثالث: الرسوم البيانية
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br><div style='background:#5c2575; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📊 الرسوم البيانية والتحليلات المتقدمة للمبيعات / Executive Visual Analytics</b></div>", unsafe_allow_html=True)
     col_chart1, col_chart2 = st.columns(2)
     
     with col_chart1:
@@ -303,7 +283,6 @@ else:
         status_counts = raw_counts.apply(clean_emojis_for_chart).value_counts()
         if not status_counts.empty:
             fig2, ax2 = plt.subplots(figsize=(6, 4))
-            
             english_labels = []
             for label in status_counts.index:
                 lbl_clean = str(label).strip()
@@ -318,3 +297,77 @@ else:
             for bar in bars:
                 ax2.text(bar.get_x() + bar.get_width()/2.0, bar.get_height() + 0.05, f'{int(bar.get_height())}', ha='center', va='bottom', weight='bold')
             st.pyplot(fig2)
+
+    # --- 📊 4️⃣ التقرير الرابع والمطور: تحليل لوحة صدارة الكتب (الكمية + الإيراد المالي) مرتبة تنازلياً ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div style='background:#34495e; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📈 لوحة صدارة مبيعات الكتب والعوائد المالية تنازلياً / Books Sales & Revenue Leaderboard</b></div>", unsafe_allow_html=True)
+    
+    book_columns = [c for c in clean_all.columns if "book type" in c.lower() or "نوع الكتاب" in c or "كتاب" in c]
+    
+    if book_columns and not target_orders.empty:
+        book_data_list = []
+        for col_b in book_columns:
+            m_head = re.search(r'\[(.*?)\]', col_b)
+            clean_book_name = m_head.group(1).strip() if m_head else col_b.replace('Book type', '').strip()
+            
+            # 1. حساب إجمالي الكمية المباعة من هذا الكتاب
+            total_qty = pd.to_numeric(target_orders[col_b], errors='coerce').fillna(0).sum()
+            
+            # 2. حساب إجمالي الإيراد المالي المتولد من هذا الكتاب بالتحديد
+            # الفكرة: نضرب كمية الكتاب في السعر الإجمالي المدفوع للطلبية (أو إيراد الصفوف الحاملة له)
+            matching_orders_with_book = target_orders[pd.to_numeric(target_orders[col_b], errors='coerce').fillna(0) > 0]
+            total_revenue = matching_orders_with_book[p_col].sum()
+            
+            if total_qty > 0:
+                book_data_list.append({
+                    'Book Type': clean_book_name,
+                    'Quantity': int(total_qty),
+                    'Revenue': total_revenue
+                })
+        
+        if book_data_list:
+            # تحويل البيانات إلى داتا فريم وفرزها تنازلياً حسب الكمية الأعلى في الصدارة
+            df_books = pd.DataFrame(book_data_list).sort_values(by='Quantity', ascending=False)
+            
+            # تقسيم الشاشة إلى جزأين: اليمين للرسم البياني، واليسار للجدول المالي التحليلي
+            col_chart_b, col_table_b = st.columns([3, 2])
+            
+            with col_chart_b:
+                fig3, ax3 = plt.subplots(figsize=(8, 4.5))
+                bars3 = ax3.bar(df_books['Book Type'], df_books['Quantity'], color='#9b59b6', width=0.35, zorder=3)
+                ax3.set_title("Top Selling Books by Quantity (Descending Order)", fontsize=10, weight='bold', color='#2c3e50', pad=15)
+                ax3.set_ylabel("Quantity Sold (Units)", fontsize=9, weight='bold')
+                ax3.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
+                plt.xticks(rotation=15, ha='right', fontsize=8, weight='bold')
+                
+                for bar in bars3:
+                    ax3.text(bar.get_x() + bar.get_width()/2.0, bar.get_height() + 0.1, f'{int(bar.get_height())} Pcs', ha='center', va='bottom', weight='bold', color='#2c3e50', fontsize=8)
+                st.pyplot(fig3)
+                
+            with col_table_b:
+                # بناء جدول HTML فاخر ثنائي اللغة يعرض مبيعات وأسعار الكتب
+                sub_table_rows = ""
+                for idx_b, r_b in df_books.iterrows():
+                    sub_table_rows += f"""<tr>
+                    <td style='padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; color:#5c2575;'>{r_b['Book Type']}</td>
+                    <td style='padding:10px; border-bottom:1px solid #eee; text-align:center; font-weight:bold; color:#2c3e50;'>{r_b['Quantity']} Pcs</td>
+                    <td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'><span style='background:#e8f8f5; color:#117a65; padding:4px 8px; border-radius:4px; font-weight:bold;'>{r_b['Revenue']:,.0f} LYD</span></td>
+                    </tr>"""
+                
+                html_book_table = f"""
+                <table style='width:100%; border-collapse:collapse; margin-top:25px; font-family:tahoma; direction:rtl; box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'>
+                    <thead>
+                        <tr style='background-color:#34495e; color:white;'>
+                            <th style='padding:12px; text-align:right;'>📚 نوع المنتج / Book Type</th>
+                            <th style='padding:12px; text-align:center;'>🔢 الكمية المباعة</th>
+                            <th style='padding:12px; text-align:center;'>💰 إجمالي عوائد المبيعات</th>
+                        </tr>
+                    </thead>
+                    <tbody>{sub_table_rows}</tbody>
+                </table>
+                """
+                st.markdown(html_book_table, unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لم يتم رصد كميات مبيعات مسجلة للكتب في هذه الحزمة بعد.</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>أعمدة مبيعات الكتب غير متوفرة في الملف حالياً.</div>", unsafe_allow_html=True)
