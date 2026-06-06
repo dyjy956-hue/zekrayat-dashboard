@@ -298,56 +298,50 @@ else:
                 ax2.text(bar.get_x() + bar.get_width()/2.0, bar.get_height() + 0.05, f'{int(bar.get_height())}', ha='center', va='bottom', weight='bold')
             st.pyplot(fig2)
 
-    # --- 📊 4️⃣ لوحة صدارة الكتب: حصر الفلترة المباشرة على حالة "تسليم" فقط وتأمين لغة الـ Chart ---
+    # --- 📊 4️⃣ لوحة صدارة الكتب: حساب المنتج الأكثر طلباً بناءً على كمية المبيعات فقط (بدون سعر) ---
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<div style='background:#117a65; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📈 لوحة صدارة مبيعات الكتب والعوائد المالية (للطلبيات المستلمة فقط) / Delivered Books Leaderboard</b></div>", unsafe_allow_html=True)
+    st.markdown("<div style='background:#117a65; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📈 لوحة صدارة الكتب الأكثر طلباً (حسب الوحدات المباعة والمستلمة فقط) / Most Requested Books Leaderboard</b></div>", unsafe_allow_html=True)
     
     book_columns = [c for c in clean_all.columns if "book type" in c.lower() or "نوع الكتاب" in c or "كتاب" in c]
     
     if book_columns and not unique_all_period.empty:
-        # 🛡️ شبكة الأمان البرمجية: تصفية المنظومة لتأخذ فقط صفوف الطلبيات "المستلمة فعلياً"
+        # تصفية الطلبيات المستلمة فعلياً
         delivered_only_orders = unique_all_period[unique_all_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)]
         
         book_data_list = []
         for col_b in book_columns:
-            # استخراج اسم المنتج بالعربي بطريقة ذكية
             m_head = re.search(r'\[(.*?)\]', col_b)
             arabic_book_name = m_head.group(1).strip() if m_head else col_b.replace('Book type', '').strip()
             
-            # بناء اسم إنجليزي محترف ومقابل لاستخدامه داخل الـ Chart لمنع التقطع
+            # مسميات اللغة الإنجليزية للرسم البياني لمنع التقطع وقلب الحروف
             english_chart_label = "Misc Item"
             if "كبير" in arabic_book_name or "Large" in arabic_book_name: english_chart_label = "Large Book"
             elif "وسط" in arabic_book_name or "Medium" in arabic_book_name: english_chart_label = "Medium Book"
             elif "صغير" in arabic_book_name or "Small" in arabic_book_name: english_chart_label = "Small Book"
             elif "مخمل" in arabic_book_name: english_chart_label = "Velvet Album"
             elif "جلد" in arabic_book_name: english_chart_label = "Leather Album"
-            else: english_chart_label = arabic_book_name  # إذا كان الاسم هجين أو إنجليزي في الشيت أصلاً
+            else: english_chart_label = arabic_book_name
             
-            # 1. تجميع كميات الكتب المباعة داخل الطلبيات المستلمة فقط
+            # حساب إجمالي قطع الوحدات المباعة والمستلمة فقط
             total_qty = pd.to_numeric(delivered_only_orders[col_b], errors='coerce').fillna(0).sum()
-            
-            # 2. تجميع مجموع العوائد والأسعار المحصلة كاش من هذا النوع
-            total_revenue = delivered_only_orders[pd.to_numeric(delivered_only_orders[col_b], errors='coerce').fillna(0) > 0][p_col].sum()
             
             if total_qty > 0:
                 book_data_list.append({
                     'Arabic Name': arabic_book_name,
                     'Chart Label': english_chart_label,
-                    'Quantity': int(total_qty),
-                    'Revenue': total_revenue
+                    'Quantity': int(total_qty)
                 })
         
         if book_data_list:
-            # ترتيب داتا فريم المنتجات تنازلياً (الأعلى كمية مبيعات مستلمة في الصدارة والمرتبة الأولى)
+            # ترتيب المنتجات تنازلياً حسب الأكثر طلباً (الكمية الأعلى في المرتبة الأولى دائماً)
             df_books = pd.DataFrame(book_data_list).sort_values(by='Quantity', ascending=False)
             
             col_chart_b, col_table_b = st.columns([3, 2])
             
             with col_chart_b:
                 fig3, ax3 = plt.subplots(figsize=(8, 4.5))
-                # الرسم البياني يقرأ التسمية الإنجليزية الآمنة لمنع تشوه الكتابة والخطوط العربية
                 bars3 = ax3.bar(df_books['Chart Label'], df_books['Quantity'], color='#117a65', width=0.35, zorder=3)
-                ax3.set_title("Delivered Books Volumes (Descending Leaderboard)", fontsize=10, weight='bold', color='#117a65', pad=15)
+                ax3.set_title("Delivered Book Volumes (Highest Demand Leaderboard)", fontsize=10, weight='bold', color='#117a65', pad=15)
                 ax3.set_ylabel("Units Delivered (Pcs)", fontsize=9, weight='bold')
                 ax3.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
                 plt.xticks(rotation=15, ha='right', fontsize=8, weight='bold')
@@ -357,22 +351,20 @@ else:
                 st.pyplot(fig3)
                 
             with col_table_b:
-                # الجدول يعرض البيانات والأسماء بالعربية الفصحى الصحيحة والسليمة تماماً
+                # الجدول يعرض فقط نوع الكتاب والكمية المطلوبة بالقطع تلبية لطلبك
                 sub_table_rows = ""
                 for idx_b, r_b in df_books.iterrows():
                     sub_table_rows += f"""<tr>
-                    <td style='padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; color:#117a65;'>{r_b['Arabic Name']}</td>
-                    <td style='padding:10px; border-bottom:1px solid #eee; text-align:center; font-weight:bold; color:#2c3e50;'>{r_b['Quantity']} قطعة</td>
-                    <td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'><span style='background:#e8f8f5; color:#117a65; padding:4px 8px; border-radius:4px; font-weight:bold;'>{r_b['Revenue']:,.0f} LYD</span></td>
+                    <td style='padding:12px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; color:#117a65;'>{r_b['Arabic Name']}</td>
+                    <td style='padding:12px; border-bottom:1px solid #eee; text-align:center; font-weight:bold; color:#2c3e50;'>{r_b['Quantity']} قطعة</td>
                     </tr>"""
                 
                 html_book_table = f"""
                 <table style='width:100%; border-collapse:collapse; margin-top:25px; font-family:tahoma; direction:rtl; box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'>
                     <thead>
                         <tr style='background-color:#117a65; color:white;'>
-                            <th style='padding:12px; text-align:right;'>📚 نوع المنتج (بالعربية السليمة)</th>
-                            <th style='padding:12px; text-align:center;'>🔢 الكمية المستلمة</th>
-                            <th style='padding:12px; text-align:center;'>💰 صافي السيولة النقدية</th>
+                            <th style='padding:12px; text-align:right;'>📚 نوع المنتج المنتج الأكثر طلباً</th>
+                            <th style='padding:12px; text-align:center;'>🔢 إجمالي كمية المبيعات</th>
                         </tr>
                     </thead>
                     <tbody>{sub_table_rows}</tbody>
@@ -380,6 +372,6 @@ else:
                 """
                 st.markdown(html_book_table, unsafe_allow_html=True)
         else:
-            st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لا توجد مبيعات مسجلة ومستلمة للكتب في هذا النطاق حالياً.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لا توجد كميات كتب مستلمة في هذا النطاق حالياً.</div>", unsafe_allow_html=True)
     else:
         st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>أعمدة مبيعات الكتب غير متوفرة في الملف حالياً.</div>", unsafe_allow_html=True)
