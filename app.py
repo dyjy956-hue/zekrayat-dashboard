@@ -180,7 +180,6 @@ if 'Single' in mode:
 else:
     selected_status = st.sidebar.selectbox("اختر حالة المجموعة بالتصفية / Filter by Status:", clean_statuses)
     
-    # فلتر المدينة الجديد في القائمة الجانبية
     expanded_cities = ['كل المدن / All Cities'] + clean_cities
     selected_city = st.sidebar.selectbox("📍 اختر فرز المدينة / Filter by City:", expanded_cities)
     
@@ -188,10 +187,8 @@ else:
     
     clean_status_val = str(selected_status).replace('✔', '').replace('🟢', '').replace('🟠', '').replace('🔵', '').strip()
     
-    # الفلترة الأساسية بناءً على الحالة
     tbl = clean_all[clean_all[st_c].astype(str).str.contains(clean_status_val, na=False, case=False)].copy()
     
-    # تفعيل فلتر المدينة إذا لم يتم اختيار "كل المدن"
     if city_c and selected_city != 'كل المدن / All Cities':
         tbl = tbl[tbl[city_c].astype(str).str.strip() == str(selected_city).strip()]
     
@@ -210,7 +207,7 @@ else:
 
     # --- حساب الأعداد الإحصائية للأزرار الملونة ---
     unique_all_period = period_data.drop_duplicates(subset=[id_c])
-    count_delivered = len(unique_all_period[unique_all_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم|مقبول', na=False, case=False)])
+    count_delivered = len(unique_all_period[unique_all_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)])
     count_shipping = len(unique_all_period[unique_all_period[st_c].str.contains('شحن|طريق|مندوب|Shipping|Shipped', na=False, case=False)])
     count_preparing = len(unique_all_period[unique_all_period[st_c].str.contains('تجهيز|تحضير|ورشة|Preparing|Process', na=False, case=False)])
     
@@ -320,7 +317,6 @@ else:
     col_chart1, col_chart2 = st.columns(2)
     
     with col_chart1:
-        # 1️⃣ رسم بياني مالي (التدفقات المالية للسيولة)
         if received_sales > 0 or pending_sales > 0:
             fig1, ax1 = plt.subplots(figsize=(6, 4))
             ax1.pie([received_sales, pending_sales], labels=['Received Cash', 'Pending Cash'], 
@@ -331,14 +327,30 @@ else:
             plt.close(fig1)
             
     with col_chart2:
-        # 2️⃣ الرسم البياني الجغرافي لتوزيع الطلبات حسب المدينة
+        # 🧠 2️⃣ محرك التصحيح والترجمة التلقائية للمدن لمنع تشوه الخط العربي داخل الـ Chart
         if city_c and not period_data.empty:
             city_counts = period_data.drop_duplicates(subset=[id_c])[city_c].value_counts()
             if not city_counts.empty:
                 fig2, ax2 = plt.subplots(figsize=(6, 4))
-                # تنظيف وحساب النسب المئوية للمدن لعرضها بالإنجليزية نقية في الـ Chart
-                geo_labels = [clean_emojis_for_chart(x) for x in city_counts.index]
-                ax2.pie(city_counts.values, labels=geo_labels, 
+                
+                # قاموس رقمي ذكي لترجمة أسماء المدن الليبية برمجياً داخل الـ Pie Chart لمنع تشتت الحروف العربية
+                geo_mapping = {
+                    "طرابلس": "Tripoli", "بنغازي": "Benghazi", "مصراتة": "Misrata", 
+                    "الزاوية": "Zawiya", "زوارة": "Zuwara", "الخمس": "Khoms", 
+                    "سبها": "Sebha", "غريان": "Ghariyan", "ترهونة": "Tarhuna"
+                }
+                
+                corrected_labels = []
+                for city_name in city_counts.index:
+                    c_clean = str(city_name).strip()
+                    # إذا وجد الاسم في القاموس يستبدله بالإنجليزية الفاخرة فوراً، وإلا يقوم بمسح الرموز وإبقاء الكلمة
+                    if c_clean in geo_mapping:
+                        corrected_labels.append(geo_mapping[c_clean])
+                    else:
+                        english_fallback = re.sub(r'[^a-zA-Z0-9\s]', '', c_clean).strip()
+                        corrected_labels.append(english_fallback if english_fallback else "Local Region")
+                
+                ax2.pie(city_counts.values, labels=corrected_labels, 
                         autopct='%1.1f%%', startangle=90, 
                         colors=['#3498db', '#9b59b6', '#f1c40f', '#e74c3c', '#1abc9c'],
                         textprops={'fontsize':9, 'weight':'bold'})
