@@ -6,18 +6,15 @@ import datetime
 import time
 import re
 
-# إعدادات الصفحة الافتراضية لواجهة الويب الفاخرة
 st.set_page_config(
     page_title="Zekrayat Dashboard",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# دالة تطهير الإيموجي للرسم
 def clean_emojis_for_chart(text_str):
     return re.sub(r'[^\w\s\(\)\-\/:]', '', str(text_str)).strip()
 
-# دالة الأيقونات الذكية للبطاقات
 def get_icon(col_name):
     c = str(col_name).lower()
     if 'كود' in c or 'code' in c: return '🆔'
@@ -50,7 +47,6 @@ except:
     clean_statuses = ['تسليم', 'قيد الشحن']
     df = pd.DataFrame()
 
-# تصفية وتجهيز الأعمدة
 if not df.empty:
     df = df.loc[:, ~df.columns.astype(str).str.contains('^Unnamed')]
     df = df.dropna(how='all', axis=1)
@@ -72,7 +68,6 @@ if not df.empty:
         clean_all['parsed_dt'] = pd.to_datetime(clean_all[t_cols[0]], errors='coerce')
         clean_all['parsed_date_only'] = clean_all['parsed_dt'].dt.date
 
-# تنسيق الواجهة عبر CSS
 st.markdown("""
     <style>
         .stRadio [data-testid="stMarkdownContainer"] p {
@@ -85,7 +80,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# حماية وتفتيت أسطر الترويسة الرئيسية من القص
 header_html = "<div style='background-color:#2c3e50; padding:15px; "
 header_html += "border-radius:10px; text-align:center; color:white; "
 header_html += "margin-bottom:20px;'><h2>📊 لوحة التحكم التنفيذية - متجر ذكريات الفاخر</h2></div>"
@@ -107,13 +101,11 @@ if st.sidebar.button("🔄 تحديث حياً وجلب البيانات الف�
 
 if 'Single' in mode:
     selected_id = st.sidebar.selectbox("اختر كود الطلب المستهدف / Select Order Code:", clean_ids)
-    
     delivered_global_mask = clean_all[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)
     tot_o = len(clean_all.drop_duplicates(subset=[id_c]))
     unique_delivered = clean_all[delivered_global_mask].drop_duplicates(subset=[id_c])
     tot_m = unique_delivered[p_col].sum()
     
-    # حماية بنرات وضع تفاصيل الطلب الفردي من البتر التلقائي
     ban1_html = "<div style='background:linear-gradient(135deg, #5c2575, #7d3c98); "
     ban1_html += "padding:14px; color:white; text-align:right; border-radius:8px; "
     ban1_html += "box-shadow:0 4px 10px rgba(0,0,0,0.1);'>"
@@ -155,7 +147,6 @@ if 'Single' in mode:
                 fsz = '14px' if col == p_col else '13px'
                 val_element = f"<span style='color:{clr}; font-weight:bold; font-size:{fsz}; font-family:tahoma;'>{v_str}</span>"
             
-            # تفكيك وتقصير أسطر كروت تفاصيل الطلبيات من البتر
             card_html = "<div style='direction: ltr; text-align: left; padding: 12px 16px; "
             card_html += "margin-bottom: 8px; background: #ffffff; border-left: 5px solid #5c2575; "
             card_html += "border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center;'>"
@@ -177,18 +168,13 @@ else:
     period_data = clean_all.copy()
 
     if date_col and not tbl.empty:
-        if 'Today' in selected_time: 
-            tbl = tbl[tbl[date_col] == today_date]
-        elif 'This Week' in selected_time: 
-            tbl = tbl[(tbl[date_col] >= start_of_week_date) & (tbl[date_col] <= today_date)]
+        if 'Today' in selected_time: tbl = tbl[tbl[date_col] == today_date]
+        elif 'This Week' in selected_time: tbl = tbl[(tbl[date_col] >= start_of_week_date) & (tbl[date_col] <= today_date)]
             
     if date_col and not period_data.empty:
-        if 'Today' in selected_time: 
-            period_data = period_data[period_data[date_col] == today_date]
-        elif 'This Week' in selected_time: 
-            period_data = period_data[(period_data[date_col] >= start_of_week_date) & (period_data[date_col] <= today_date)]
+        if 'Today' in selected_time: period_data = period_data[period_data[date_col] == today_date]
+        elif 'This Week' in selected_time: period_data = period_data[(period_data[date_col] >= start_of_week_date) & (period_data[date_col] <= today_date)]
 
-    # --- حساب الأعداد الإحصائية للأزرار الملونة ---
     unique_all_period = period_data.drop_duplicates(subset=[id_c])
     count_delivered = len(unique_all_period[unique_all_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)])
     count_shipping = len(unique_all_period[unique_all_period[st_c].str.contains('شحن|طريق|مندوب|Shipping|Shipped', na=False, case=False)])
@@ -215,7 +201,6 @@ else:
 
     clean_time_display = clean_emojis_for_chart(selected_time)
 
-    # تفكيك وتقصير بنر كشف الأداء لحمايته من البتر
     ban3_html = "<div style='background:#5c2575; padding:10px; color:white; "
     ban3_html += "text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>"
     ban3_html += f"📋 كشف أداء حزمة: {selected_status} ({clean_time_display}) | العدد: {grp_o} | القيمة المستلمة: {grp_m:,} LYD 💰</div>"
@@ -227,7 +212,6 @@ else:
     with col_kpi2:
         st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ إجمالي أرباح معلقة في التوصيل:<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
 
-    # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي
     st.markdown("<br><div style='background:#2c3e50; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>💎 لوحة التقارير المالية التفصيلية لطلبيات الحزمة / Detailed Financial Statement</b></div>", unsafe_allow_html=True)
     
     table_rows = ""
@@ -252,7 +236,6 @@ else:
         books_summary_str = " + ".join(row_books) if row_books else "مبيعات متنوعة / Misc Items"
         price_display = f"{order_price:,.0f} LYD" if order_price > 0 else "⚠️ 0 LYD"
 
-        # تفكيك وتقصير أسطر الجدول المالي لمنع انكسار علامات التنصيص
         t_row_block = f"<tr><td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'>"
         t_row_block += f"<span style='background:#eaf2f8; color:#2471a3; padding:4px 8px; border-radius:4px; font-weight:bold;'>{order_code}</span></td>"
         t_row_block += f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold;'>{customer_name}</td>"
@@ -266,7 +249,6 @@ else:
         total_html_row += "<td colspan='3' style='padding:12px; text-align:right;'>📊 إجمالي صافي إيرادات الخزينة الكلية لهذه الحزمة</td>"
         total_html_row += f"<td style='padding:12px; text-align:center;'><span style='background:#7d3c98; color:white; padding:5px 12px; border-radius:4px;'>{grand_total_rev:,.0f} LYD</span></td></tr>"
         
-        # تفتيت وتقصير كود بناء هيكل الجدول بأكمله لمنع البتر نهائياً
         tbl_head = "<table style='width:100%; border-collapse:collapse; margin-top:10px; font-family:tahoma; direction:rtl; "
         tbl_head += "box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'><thead>"
         tbl_head += "<tr style='background-color:#5c2575; color:white;'>"
@@ -279,7 +261,6 @@ else:
     else:
         st.markdown("لا توجد طلبيات مسجلة في هذا النطاق حالياً.")
 
-    # 3️⃣ التقرير الثالث: الرسوم البيانية الكلية
     st.markdown("<br><div style='background:#5c2575; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📊 الرسوم البيانية والتحليلات المتقدمة للمبيعات / Executive Visual Analytics</b></div>", unsafe_allow_html=True)
     col_chart1, col_chart2 = st.columns(2)
     
@@ -312,29 +293,28 @@ else:
                 ax2.text(bar.get_x() + bar.get_width()/2.0, bar.get_height() + 0.05, f'{int(bar.get_height())}', ha='center', va='bottom', weight='bold')
             st.pyplot(fig2)
 
-    # --- 📊 4️⃣ لوحة صدارة الكتب الأكثر طلباً وتطهير كامل للحروف العربية في الـ Chart ---
+    # --- 📊 4️⃣ لوحة صدارة الكتب: ربط الـ Chart بالحزمة الحركية النشطة مباشرة لضمان الظهور الفوري ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("<div style='background:#117a65; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📈 لوحة صدارة الكتب الأكثر طلباً (حسب الوحدات المباعة والمستلمة فقط) / Most Requested Books Leaderboard</b></div>", unsafe_allow_html=True)
     
     book_columns = [c for c in clean_all.columns if "book type" in c.lower() or "نوع الكتاب" in c or "كتاب" in c]
     
-    if book_columns and not unique_all_period.empty:
-        delivered_only_orders = unique_all_period[unique_all_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)]
-        
+    if book_columns and not target_orders.empty:
+        # التعديل الهندسي الذكي: جعل المحرك يقرأ مباشرة الطلبيات الفريدة للحزمة المختارة حالياً
         book_data_list = []
         for col_b in book_columns:
             m_head = re.search(r'\[(.*?)\]', col_b)
             arabic_book_name = m_head.group(1).strip() if m_head else col_b.replace('Book type', '').strip()
             
-            # فلترة وتحويل صارم للغة الإنجليزية بنسبة 100% لتجنب تقطع الخطوط العربية داخل الـ Chart
             if "كبير" in arabic_book_name or "Large" in arabic_book_name: english_chart_label = "Large Book"
             elif "وسط" in arabic_book_name or "Medium" in arabic_book_name: english_chart_label = "Medium Book"
             elif "صغير" in arabic_book_name or "Small" in arabic_book_name: english_chart_label = "Small Book"
             elif "مخمل" in arabic_book_name: english_chart_label = "Velvet Album"
             elif "جلد" in arabic_book_name: english_chart_label = "Leather Album"
-            else: english_chart_label = "Standard Book" # إزالة أي إسناد عربي تلقائي للـ Chart
+            else: english_chart_label = "Standard Book"
             
-            total_qty = pd.to_numeric(delivered_only_orders[col_b], errors='coerce').fillna(0).sum()
+            # قراءة كميات الكتب داخل الحزمة النشطة المختارة حالياً في القائمة الجانبية
+            total_qty = pd.to_numeric(target_orders[col_b], errors='coerce').fillna(0).sum()
             
             if total_qty > 0:
                 book_data_list.append({
@@ -360,7 +340,6 @@ else:
                 st.pyplot(fig3)
                 
             with col_table_b:
-                # تفتيت وتقصير جدول لوحة الصدارة وعرضه بصافي الكميات فقط (بدون أسعار) لحمايته من البتر
                 sub_table_rows = ""
                 for idx_b, r_b in df_books.iterrows():
                     sub_table_rows += f"<tr><td style='padding:12px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; color:#117a65;'>{r_b['Arabic Name']}</td>"
@@ -368,12 +347,12 @@ else:
                 
                 tbl_b_head = "<table style='width:100%; border-collapse:collapse; margin-top:25px; font-family:tahoma; direction:rtl; "
                 tbl_b_head += "box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'><thead>"
-                tbl_b_head += "<tr style='background-color:#117a65; color:white;'>"
+                tbl_b_head += "<tr style='background-color:#117a65; color:white;'> "
                 tbl_b_head += "<th style='padding:12px; text-align:right;'>📚 نوع المنتج الأكثر طلباً</th>"
                 tbl_b_head += "<th style='padding:12px; text-align:center;'>🔢 إجمالي كمية المبيعات</th></tr></thead>"
                 tbl_b_final = f"{tbl_b_head}<tbody>{sub_table_rows}</tbody></table>"
                 st.markdown(tbl_b_final, unsafe_allow_html=True)
         else:
-            st.markdown("لا توجد كميات كتب مستلمة في هذا النطاق حالياً.")
+            st.markdown("لا توجد كميات كتب مستلمة في هذه الحزمة المحددة حالياً.")
     else:
-        st.markdown("أعمدة مبيعات الكتب غير متوفرة في الملف حالياً.")
+        st.markdown("لا توجد طلبيات في النطاق الزمني أو الحزمة الحالية لعرض مبيعات كتبها.")
