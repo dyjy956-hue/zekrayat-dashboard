@@ -236,11 +236,11 @@ else:
         books_summary_str = " + ".join(row_books) if row_books else "مبيعات متنوعة / Misc Items"
         price_display = f"{order_price:,.0f} LYD" if order_price > 0 else "⚠️ 0 LYD"
 
-        t_row_block = f"<tr><td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'>"
+        t_row_block = f"<tr><td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'> "
         t_row_block += f"<span style='background:#eaf2f8; color:#2471a3; padding:4px 8px; border-radius:4px; font-weight:bold;'>{order_code}</span></td>"
         t_row_block += f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold;'>{customer_name}</td>"
         t_row_block += f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:right; color:#5c2575; font-weight:bold;'>{books_summary_str}</td>"
-        t_row_block += f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'>"
+        t_row_block += f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'> "
         t_row_block += f"<span style='background:#e8f8f5; color:#117a65; padding:4px 8px; border-radius:4px; font-weight:bold;'>{price_display}</span></td></tr>"
         table_rows += t_row_block
     
@@ -251,7 +251,7 @@ else:
         
         tbl_head = "<table style='width:100%; border-collapse:collapse; margin-top:10px; font-family:tahoma; direction:rtl; "
         tbl_head += "box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'><thead>"
-        tbl_head += "<tr style='background-color:#5c2575; color:white;'>"
+        tbl_head += "<tr style='background-color:#5c2575; color:white;'> "
         tbl_head += "<th style='padding:12px; text-align:right;'>🆔 كود الطلبية</th>"
         tbl_head += "<th style='padding:12px; text-align:right;'>👤 اسم الزبون</th>"
         tbl_head += "<th style='padding:12px; text-align:right;'>📚 مواصفات الحزمة</th>"
@@ -281,78 +281,4 @@ else:
             english_labels = []
             for label in status_counts.index:
                 lbl_clean = str(label).strip()
-                if 'تسليم' in lbl_clean or 'تم' in lbl_clean: english_labels.append('Delivered')
-                elif 'شحن' in lbl_clean or 'طريق' in lbl_clean: english_labels.append('Shipping')
-                elif 'تجهيز' in lbl_clean or 'انتظار' in lbl_clean: english_labels.append('Preparing')
-                else: english_labels.append('Pending/Unspecified')
-                
-            bars = ax2.bar(english_labels, status_counts.values, color=['#2ecc71' if x == 'Delivered' else '#e67e22' for x in english_labels], width=0.4, zorder=3)
-            ax2.set_title("Operational Workspace Load (Orders Count)", fontsize=10, weight='bold', color='#5c2575', pad=15)
-            ax2.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
-            for bar in bars:
-                ax2.text(bar.get_x() + bar.get_width()/2.0, bar.get_height() + 0.05, f'{int(bar.get_height())}', ha='center', va='bottom', weight='bold')
-            st.pyplot(fig2)
-
-    # --- 📊 4️⃣ لوحة صدارة الكتب: ربط الـ Chart بالحزمة الحركية النشطة مباشرة لضمان الظهور الفوري ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<div style='background:#117a65; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📈 لوحة صدارة الكتب الأكثر طلباً (حسب الوحدات المباعة والمستلمة فقط) / Most Requested Books Leaderboard</b></div>", unsafe_allow_html=True)
-    
-    book_columns = [c for c in clean_all.columns if "book type" in c.lower() or "نوع الكتاب" in c or "كتاب" in c]
-    
-    if book_columns and not target_orders.empty:
-        # التعديل الهندسي الذكي: جعل المحرك يقرأ مباشرة الطلبيات الفريدة للحزمة المختارة حالياً
-        book_data_list = []
-        for col_b in book_columns:
-            m_head = re.search(r'\[(.*?)\]', col_b)
-            arabic_book_name = m_head.group(1).strip() if m_head else col_b.replace('Book type', '').strip()
-            
-            if "كبير" in arabic_book_name or "Large" in arabic_book_name: english_chart_label = "Large Book"
-            elif "وسط" in arabic_book_name or "Medium" in arabic_book_name: english_chart_label = "Medium Book"
-            elif "صغير" in arabic_book_name or "Small" in arabic_book_name: english_chart_label = "Small Book"
-            elif "مخمل" in arabic_book_name: english_chart_label = "Velvet Album"
-            elif "جلد" in arabic_book_name: english_chart_label = "Leather Album"
-            else: english_chart_label = "Standard Book"
-            
-            # قراءة كميات الكتب داخل الحزمة النشطة المختارة حالياً في القائمة الجانبية
-            total_qty = pd.to_numeric(target_orders[col_b], errors='coerce').fillna(0).sum()
-            
-            if total_qty > 0:
-                book_data_list.append({
-                    'Arabic Name': arabic_book_name,
-                    'Chart Label': english_chart_label,
-                    'Quantity': int(total_qty)
-                })
-        
-        if book_data_list:
-            df_books = pd.DataFrame(book_data_list).sort_values(by='Quantity', ascending=False)
-            col_chart_b, col_table_b = st.columns([3, 2])
-            
-            with col_chart_b:
-                fig3, ax3 = plt.subplots(figsize=(8, 4.5))
-                bars3 = ax3.bar(df_books['Chart Label'], df_books['Quantity'], color='#117a65', width=0.35, zorder=3)
-                ax3.set_title("Delivered Book Volumes (Highest Demand Leaderboard)", fontsize=10, weight='bold', color='#117a65', pad=15)
-                ax3.set_ylabel("Units Delivered (Pcs)", fontsize=9, weight='bold')
-                ax3.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
-                plt.xticks(rotation=15, ha='right', fontsize=8, weight='bold')
-                
-                for bar in bars3:
-                    ax3.text(bar.get_x() + bar.get_width()/2.0, bar.get_height() + 0.1, f'{int(bar.get_height())} Pcs', ha='center', va='bottom', weight='bold', color='#2c3e50', fontsize=8)
-                st.pyplot(fig3)
-                
-            with col_table_b:
-                sub_table_rows = ""
-                for idx_b, r_b in df_books.iterrows():
-                    sub_table_rows += f"<tr><td style='padding:12px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; color:#117a65;'>{r_b['Arabic Name']}</td>"
-                    sub_table_rows += f"<td style='padding:12px; border-bottom:1px solid #eee; text-align:center; font-weight:bold; color:#2c3e50;'>{r_b['Quantity']} قطعة</td></tr>"
-                
-                tbl_b_head = "<table style='width:100%; border-collapse:collapse; margin-top:25px; font-family:tahoma; direction:rtl; "
-                tbl_b_head += "box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'><thead>"
-                tbl_b_head += "<tr style='background-color:#117a65; color:white;'> "
-                tbl_b_head += "<th style='padding:12px; text-align:right;'>📚 نوع المنتج الأكثر طلباً</th>"
-                tbl_b_head += "<th style='padding:12px; text-align:center;'>🔢 إجمالي كمية المبيعات</th></tr></thead>"
-                tbl_b_final = f"{tbl_b_head}<tbody>{sub_table_rows}</tbody></table>"
-                st.markdown(tbl_b_final, unsafe_allow_html=True)
-        else:
-            st.markdown("لا توجد كميات كتب مستلمة في هذه الحزمة المحددة حالياً.")
-    else:
-        st.markdown("لا توجد طلبيات في النطاق الزمني أو الحزمة الحالية لعرض مبيعات كتبها.")
+                if 'تسليم' in lbl_clean or '
