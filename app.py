@@ -41,7 +41,8 @@ mode = st.sidebar.radio("اختر وضع العرض:", ['🔍 تفاصيل طل�
 if st.sidebar.button("🔄 تحديث البيانات حياً"):
     st.cache_data.clear()
     st.rerun()
- if clean_all.empty:
+
+if clean_all.empty:
     st.error("⚠️ لم يتم العثور على بيانات حية. تأكد من صلاحيات الشيت للعامة.")
 else:
     if 'Single' in mode:
@@ -54,7 +55,7 @@ else:
                 if "Unnamed" in str(col) or col in ['parsed_date_only', 'parsed_dt']: continue
                 val = str(row[col]).strip() if pd.notna(row[col]) else "—"
                 if any(k in col.lower() for k in ["book", "كتاب", "ألبوم"]) and val in ["0", "0.0", "0.00"]: continue
-                st.markdown(f"<div style='direction:ltr; text-align:left; padding:12px 16px; margin-bottom:6px; background:#fff; border-left:5px solid #5c2575; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.05);'><span style='color:#7f8c8d; font-weight:bold;'>{col}:</span> <span style='color:#2c3e50; font-weight:bold; margin-left:10px;'>{val}</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='direction:ltr; text-align:left; padding:12px 16px; margin-bottom:6px; background:#fff; border-left:5px solid #5c2575; border-radius:4px;'><span style='color:#7f8c8d; font-weight:bold;'>{col}:</span> <span style='color:#2c3e50; font-weight:bold; margin-left:10px;'>{val}</span></div>", unsafe_allow_html=True)
     else:
         selected_status = st.sidebar.selectbox("اختر الحالة للفرز:", clean_statuses)
         selected_time = st.sidebar.selectbox("اختر النطاق الزمني:", ['كل الأوقات', 'طلبات اليوم فقط', 'طلبات هذا الأسبوع'])
@@ -119,34 +120,3 @@ else:
                 ax2.bar(eng_lbls, status_counts.values, color=['#2ecc71' if x=='Delivered' else '#e67e22' for x in eng_lbls], width=0.3)
                 ax2.set_title("Operational Workspace Load", fontsize=9, weight='bold')
                 ax2.grid(axis='y', linestyle='--', alpha=0.5)
-                st.pyplot(fig2)
-
-        st.markdown("<br><div style='background:#117a65; padding:6px; color:white; text-align:center; border-radius:4px;'><b>📈 لوحة صدارة مبيعات الكتب وعوائدها (المستلمة فقط) / Delivered Books Leaderboard</b></div>", unsafe_allow_html=True)
-        b_cols = [c for c in clean_all.columns if any(k in c.lower() for k in ["book", "كتاب", "ألبوم"])]
-        if b_cols:
-            del_orders = u_period[u_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)]
-            b_list = []
-            for col_b in b_cols:
-                m_head = re.search(r'\[(.*?)\]', col_b)
-                ar_name = m_head.group(1).strip() if m_head else col_b.replace('Book type', '').strip()
-                lbl = "Custom Item"
-                if "كبير" in ar_name: lbl = "Large Album"
-                elif "وسط" in ar_name: lbl = "Medium Album"
-                elif "صغير" in ar_name: lbl = "Small Album"
-                elif "مخمل" in ar_name: lbl = "Velvet Album"
-                elif "جلد" in ar_name: lbl = "Leather Album"
-                t_qty = pd.to_numeric(del_orders[col_b], errors='coerce').fillna(0).sum()
-                t_rev = del_orders[pd.to_numeric(del_orders[col_b], errors='coerce').fillna(0) > 0][p_col].sum()
-                if t_qty > 0: b_list.append({'Arabic': ar_name, 'Label': lbl, 'Qty': int(t_qty), 'Rev': t_rev})
-            if b_list:
-                df_b = pd.DataFrame(b_list).sort_values(by='Qty', ascending=False)
-                ch_b, tb_b = st.columns([3, 2])
-                with ch_b:
-                    fig3, ax3 = plt.subplots(figsize=(7, 4))
-                    ax3.bar(df_b['Label'], df_b['Qty'], color='#117a65', width=0.3)
-                    ax3.set_title("Delivered Volumes (Descending Order)", fontsize=9, weight='bold')
-                    plt.xticks(rotation=10, fontsize=8)
-                    st.pyplot(fig3)
-                with tb_b:
-                    sub_rows = "".join([f"<tr><td style='padding:6px; border-bottom:1px solid #eee;'>{r['Arabic']}</td><td style='padding:6px; border-bottom:1px solid #eee; text-align:center;'>{r['Qty']} قطعة</td><td style='padding:6px; border-bottom:1px solid #eee; text-align:center; color:#117a65;'>{r['Rev']:,.0f} LYD</td></tr>" for i, r in df_b.iterrows()])
-                    st.markdown(f"<table style='width:100%; border-collapse:collapse; direction:rtl; font-size:12px; margin-top:20px;'><thead><tr style='background:#117a65; color:white;'><th style='padding:8px; text-align:right;'>📚 نوع المنتج</th><th style='padding:8px; text-align:center;'>🔢 الكمية</th><th style='padding:8px; text-align:center;'>💰 الصافي</th></tr></thead><tbody>{sub_rows}</tbody></table>", unsafe_allow_html=True)
