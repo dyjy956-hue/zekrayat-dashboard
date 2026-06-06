@@ -2,7 +2,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import datetime
 import time
 import re
 import arabic_reshaper
@@ -11,28 +10,27 @@ from bidi.algorithm import get_display
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Zekrayat Dashboard", layout="wide")
 
-# 2. دوال المعالجة (التعريب والتنظيف)
+# 2. دالة لضبط النصوص العربية للرسوم البيانية
 def get_arabic(text):
     return get_display(arabic_reshaper.reshape(str(text)))
-
-def clean_emojis(text):
-    return re.sub(r'[^\w\s\(\)\-\/:]', '', str(text)).strip()
 
 # 3. جلب البيانات
 base_url = "https://docs.google.com/spreadsheets/d/1i7lTyW3PIcryPWgdpS8hr_43ZJ1aEYHrW0PFl8oxM5Q/export?format=xlsx"
 try:
     df = pd.read_excel(f"{base_url}&cache_bust={int(time.time())}", engine='openpyxl')
+    
+    # تحديد الأعمدة تلقائياً
     id_c = [c for c in df.columns if "كود" in c][0]
     st_c = [c for c in df.columns if "حالة" in c][0]
     p_col = [c for c in df.columns if "سعر" in c or "إجمالي" in c][0]
     city_c = [c for c in df.columns if any(k in str(c) for k in ["مدينة", "عنوان"])][0]
     
     df[id_c] = df[id_c].astype(str).str.strip()
-    df[st_c] = df[st_c].fillna("Unspecified").astype(str)
-    df[city_c] = df[city_c].fillna("Unspecified").astype(str)
+    df[st_c] = df[st_c].fillna("غير محدد").astype(str)
+    df[city_c] = df[city_c].fillna("غير محدد").astype(str)
     df[p_col] = pd.to_numeric(df[p_col], errors='coerce').fillna(0)
-except:
-    st.error("خطأ في جلب البيانات من قوقل شيت")
+except Exception as e:
+    st.error(f"خطأ في جلب البيانات: {e}")
     st.stop()
 
 # 4. الواجهة والفرز
@@ -52,20 +50,25 @@ if selected_city != 'الكل': tbl = tbl[tbl[city_c] == selected_city]
 
 # 5. الإحصائيات (Metrics)
 c1, c2, c3 = st.columns(3)
-c1.metric("الطلبات", len(tbl))
-c2.metric("الإيرادات", f"{tbl[p_col].sum():,.0f} LYD")
-c3.metric("المدن المغطاة", len(tbl[city_c].unique()))
+c1.metric("عدد الطلبات", len(tbl))
+c2.metric("الإيرادات (LYD)", f"{tbl[p_col].sum():,.0f}")
+c3.metric("عدد المدن", len(tbl[city_c].unique()))
 
-# 6. توزيع المدن (Pie Chart) مع دعم العربية
-st.subheader("📍 التوزيع الجغرافي")
+# 6. توزيع المدن (Donut Chart)
+st.subheader("📍 التوزيع الجغرافي للطلبات")
 city_counts = tbl[city_c].value_counts()
 fig_pie, ax_pie = plt.subplots(figsize=(6, 4))
-ax_pie.pie(city_counts.values, labels=[get_arabic(x) for x in city_counts.index], autopct='%1.1f%%', startangle=140)
-ax_pie.set_title(get_arabic("توزيع الطلبات حسب المدينة"), fontsize=12)
+
+ax_pie.pie(city_counts.values, 
+           labels=[get_arabic(x) for x in city_counts.index], 
+           autopct='%1.1f%%', 
+           startangle=140,
+           wedgeprops={'width': 0.4}) # لجعلها Donut Chart
+ax_pie.set_title(get_arabic("توزيع الطلبات حسب المدينة"), fontsize=14)
 st.pyplot(fig_pie)
 
 # 7. صدارة الكتب (لطلبيات التسليم فقط)
-st.subheader("📈 صدارة الكتب الأكثر طلباً (طلبات التسليم)")
+st.subheader("📈 صدارة الكتب الأكثر طلباً")
 delivered = tbl[tbl[st_c].str.contains('تسليم|تم|مستلم', na=False, case=False)]
 
 if not delivered.empty:
@@ -81,14 +84,14 @@ if not delivered.empty:
         df_b = pd.DataFrame(data).sort_values("Qty", ascending=False)
         fig_b, ax_b = plt.subplots(figsize=(8, 4))
         ax_b.bar([get_arabic(x) for x in df_b["Book"]], df_b["Qty"], color='#117a65')
-        ax_b.set_title(get_arabic("الكتب الأكثر طلباً"), fontsize=12)
+        ax_b.set_title(get_arabic("الكتب الأكثر طلباً"), fontsize=14)
         plt.xticks(rotation=15)
         st.pyplot(fig_b)
     else:
-        st.info("لا توجد مبيعات كتب في طلبات التسليم.")
+        st.info("لا توجد مبيعات كتب في طلبات التسليم الحالية.")
 else:
-    st.warning("لا توجد طلبيات تسليم لعرض صدارة الكتب.")
+    st.warning("لا توجد طلبيات 'تسليم' لعرض صدارة الكتب.")
 
-# 8. الجدول
-st.subheader("📋 التفاصيل")
+# 8. جدول التفاصيل
+st.subheader("📋 جدول الطلبيات")
 st.table(tbl)
