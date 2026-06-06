@@ -6,18 +6,15 @@ import datetime
 import time
 import re
 
-# إعدادات الصفحة الافتراضية لواجهة الويب الفاخرة
 st.set_page_config(
     page_title="Zekrayat Dashboard",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# دالة تطهير الإيموجي للرسم
 def clean_emojis_for_chart(text_str):
     return re.sub(r'[^\w\s\(\)\-\/:]', '', str(text_str)).strip()
 
-# دالة الأيقونات الذكية للبطاقات
 def get_icon(col_name):
     c = str(col_name).lower()
     if 'كود' in c or 'code' in c: return '🆔'
@@ -77,30 +74,58 @@ st.markdown("""
             font-size: 16px !important;
             font-weight: 800 !important;
             color: #5c2575 !important;
-            font-family: 'Segoe UI', Tahoma, sans-serif !important;
         }
         div[data-testid="stBlock"] { direction: rtl !important; text-align: right !important; }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<div style='background-color:#2c3e50; padding:15px; border-radius:10px; text-align:center; color:white; font-family:tahoma; margin-bottom:20px;'><h2>📊 لوحة التحكم التنفيذية - متجر ذكريات الفاخر / Zekrayat Store Dashboard</h2></div>", unsafe_allow_html=True)
-st.sidebar.markdown("<div style='background-color:#5c2575; padding:8px; color:white; text-align:center; font-weight:bold; border-radius:4px;'>⚙️ لوحة الفرز والملاحة / Control Panel</div>", unsafe_allow_html=True)
+# تفتيت السطر الطويل للعنوان الرئيسي لضمان الحماية
+header_html = "<div style='background-color:#2c3e50; padding:15px; "
+header_html += "border-radius:10px; text-align:center; color:white; "
+header_html += "margin-bottom:20px;'><h2>📊 لوحة التحكم التنفيذية - متجر ذكريات</h2></div>"
+st.markdown(header_html, unsafe_allow_html=True)
+
+sidebar_html = "<div style='background-color:#5c2575; padding:8px; "
+sidebar_html += "color:white; text-align:center; font-weight:bold; "
+sidebar_html += "border-radius:4px;'>⚙️ لوحة الفرز والملاحة</div>"
+st.sidebar.markdown(sidebar_html, unsafe_allow_html=True)
 
 mode = st.sidebar.radio(
-    "اختر وضع العرض المطلوب / Select View Mode:",
-    ['🔍 تفاصيل طلبية واحدة / Single Order Inquiry', '📊 عرض المجموعات والتقارير / Executive Analytics']
+    "اختر وضع العرض المطلوب:",
+    ['🔍 تفاصيل طلبية واحدة', '📊 عرض المجموعات والتقارير']
 )
 
-if st.sidebar.button("🔄 تحديث حياً وجلب البيانات الفورية / Live Fetch Sync", use_container_width=True):
+if st.sidebar.button("🔄 تحديث حياً", use_container_width=True):
     st.cache_data.clear()
     st.rerun()
 
 if 'Single' in mode:
-    selected_id = st.sidebar.selectbox("اختر كود الطلب المستهدف / Select Order Code:", clean_ids)
+    selected_id = st.sidebar.selectbox("اختر كود الطلب:", clean_ids)
+    
     delivered_global_mask = clean_all[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)
     tot_o = len(clean_all.drop_duplicates(subset=[id_c]))
     unique_delivered = clean_all[delivered_global_mask].drop_duplicates(subset=[id_c])
     tot_m = unique_delivered[p_col].sum()
     
-    st.markdown(f"<div style='background:linear-gradient(135deg, #5c2575, #7d3c98); padding:14px; color:white; text-align:right; font-family:tahoma; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1);'><b>📊 إجمالي الطلبات الفريدة بالمنظومة / Total Orders: {tot_o} | 💰 مبيعات الخزينة الكلية المحققة / Total Cash: {tot_m:,} LYD</b></div>", unsafe_allow_html=True)
-    st.markdown(f"<div style='background:#2c3e50; padding:10px; color:white; text-align:right; margin-top:10px; border-radius:6px;
+    # تفكيك وتأمين البنرات العلوية لوضع الطلب الفردي من القص نهائياً
+    ban1 = "<div style='background:linear-gradient(135deg, #5c2575, #7d3c98); "
+    ban1 += "padding:14px; color:white; text-align:right; border-radius:8px; "
+    ban1 += "box-shadow:0 4px 10px rgba(0,0,0,0.1);'>"
+    ban1 += f"<b>📊 إجمالي الطلبات: {tot_o} | 💰 مبيعات الخزينة المحققة: {tot_m:,} LYD</b></div>"
+    st.markdown(ban1, unsafe_allow_html=True)
+    
+    ban2 = "<div style='background:#2c3e50; padding:10px; color:white; "
+    ban2 += "text-align:right; margin-top:10px; border-radius:6px;'>"
+    ban2 += f"<b>📌 تفاصيل كود الطلب الحالي: {selected_id}</b></div>"
+    st.markdown(ban2, unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
+    
+    matching_rows = df[df[id_c].fillna('').astype(str).str.strip() == str(selected_id).strip()]
+    if not matching_rows.empty:
+        row = matching_rows.iloc[0]
+        for col in df.columns:
+            if "رابط" in col or col == 'parsed_date_only' or "parsed_dt" in col or "Unnamed" in str(col) or "Product type" in col: continue
+            val = row[col]
+            v_str = str(val).strip() if pd.notna(val) else '—'
+            
+            if "
