@@ -46,8 +46,8 @@ try:
     clean_ids = sorted([str(x).strip() for x in clean_all_temp[id_c].unique() if str(x).strip() != ''])
     clean_statuses = sorted([str(x).strip() for x in df[st_c].unique() if str(x).strip() != ''])
 except:
-    clean_ids = ['D-ORD-1', 'D-ORD-2']
-    clean_statuses = ['تسليم', 'قيد الشحن']
+    clean_ids = ['D-ORD-1', 'D-ORD-2', 'D-ORD-3', 'D-ORD-4', 'D-ORD-5', 'D-ORD-6']
+    clean_statuses = ['تسليم', 'قيد الشحن', 'قيد التجهيز', 'غير محدد / Unspecified']
     df = pd.DataFrame()
 
 # تصفية وتجهيز الأعمدة
@@ -114,7 +114,7 @@ if 'Single' in mode:
     
     st.markdown(f"""
     <div style='background:linear-gradient(135deg, #5c2575, #7d3c98); padding:14px; color:white; text-align:right; font-family:tahoma; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1);'>
-        <b>📊 إجمالي الطلبات الفريدة: {tot_o} | 💰 مبيعات الخزينة الكلية المحققة: {tot_m:,} LYD</b>
+        <b>📊 إجمالي الطلبات الفريدة بالمنظومة: {tot_o} | 💰 مبيعات الخزينة الكلية المحققة: {tot_m:,} LYD</b>
     </div>
     """, unsafe_allow_html=True)
     
@@ -167,56 +167,4 @@ else:
     selected_time = st.sidebar.selectbox("اختر النطاق الزمني للتقرير / Select Period:", ['كل الأوقات / All Times (All)', 'طلبات اليوم فقط / Today Only (Today)', 'طلبات هذا الأسبوع / This Week Only (This Week)'])
     
     clean_status_val = str(selected_status).replace('✔', '').replace('🟢', '').replace('🟠', '').replace('🔵', '').strip()
-    tbl = clean_all[clean_all[st_c].str.contains(clean_status_val, na=False, case=False)].copy()
-    
-    today_date = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=2)).date()
-    start_of_week_date = today_date - datetime.timedelta(days=7)
-    
-    period_data = clean_all.copy()
-
-    if date_col and not tbl.empty:
-        if 'Today' in selected_time: tbl = tbl[tbl[date_col] == today_date]
-        elif 'This Week' in selected_time: tbl = tbl[(tbl[date_col] >= start_of_week_date) & (tbl[date_col] <= today_date)]
-            
-    if date_col and not period_data.empty:
-        if 'Today' in selected_time: period_data = period_data[period_data[date_col] == today_date]
-        elif 'This Week' in selected_time: period_data = period_data[(period_data[date_col] >= start_of_week_date) & (period_data[date_col] <= today_date)]
-
-    # --- حساب الأعداد الإحصائية للأزرار الملونة ---
-    unique_all_period = period_data.drop_duplicates(subset=[id_c])
-    count_delivered = len(unique_all_period[unique_all_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)])
-    count_shipping = len(unique_all_period[unique_all_period[st_c].str.contains('شحن|طريق|مندوب|Shipping|Shipped', na=False, case=False)])
-    count_preparing = len(unique_all_period[unique_all_period[st_c].str.contains('تجهيز|تحضير|ورشة|Preparing|Process', na=False, case=False)])
-    
-    col_btn1, col_btn2, col_btn3 = st.columns(3)
-    with col_btn1:
-        st.markdown(f"<div style='background: linear-gradient(135deg, #2ecc71, #27ae60); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);'><span style='font-size: 28px; font-weight: bold; display: block;'>{count_delivered}</span><span style='font-size: 14px; font-family: tahoma; font-weight: bold;'>📦 عدد الطلبات المستلمة / Delivered</span></div>", unsafe_allow_html=True)
-    with col_btn2:
-        st.markdown(f"<div style='background: linear-gradient(135deg, #e67e22, #d35400); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(230, 126, 34, 0.2);'><span style='font-size: 28px; font-weight: bold; display: block;'>{count_shipping}</span><span style='font-size: 14px; font-family: tahoma; font-weight: bold;'>🚚 في الشحن والتوصيل / In Shipping</span></div>", unsafe_allow_html=True)
-    with col_btn3:
-        st.markdown(f"<div style='background: linear-gradient(135deg, #3498db, #2980b9); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);'><span style='font-size: 28px; font-weight: bold; display: block;'>{count_preparing}</span><span style='font-size: 14px; font-family: tahoma; font-weight: bold;'>🛠️ طلبات تحت التجهيز / Preparing</span></div>", unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    grp_o = len(tbl.drop_duplicates(subset=[id_c]))
-    tbl_delivered_unique = tbl[tbl[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
-    grp_m = tbl_delivered_unique[p_col].sum()
-
-    delivered_unique_period = period_data[period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
-    pending_unique_period = period_data[~period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
-    received_sales = delivered_unique_period[p_col].sum()
-    pending_sales = pending_unique_period[p_col].sum()
-
-    clean_time_display = clean_emojis_for_chart(selected_time)
-
-    st.markdown(f"""
-    <div style='background:#5c2575; padding:10px; color:white; text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>
-        📋 كشف أداء حزمة: {selected_status} ({clean_time_display}) | العدد: {grp_o} | القيمة المستلمة: {grp_m:,} LYD 💰
-    </div>
-    """, unsafe_allow_html=True)
-    
-    col_kpi1, col_kpi2 = st.columns(2)
-    with col_kpi1:
-        st.markdown(f"<div style='background:#2ecc71; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>💵 إجمالي السيولة المستلمة بالخزينة:<br><span style='font-size:20px;'>{received_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
-    with col_kpi2:
-        st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0
+    tbl = clean_all
