@@ -19,11 +19,10 @@ try:
     p_col = [c for c in df.columns if any(k in c for k in ["سعر", "إجمالي", "Price", "Total"])][0] if [c for c in df.columns if any(k in c for k in ["سعر", "إجمالي", "Price", "Total"])] else df.columns[-1]
     name_col = [c for c in df.columns if any(k in c for k in ["اسم", "زبون", "عميل", "Name"])][0] if [c for c in df.columns if any(k in c for k in ["اسم", "زبون", "عميل", "Name"])] else df.columns[1]
     
-    # تنظيف وتجهيز الأعمدة لتقبل أي مدخلات
     df[id_c] = df[id_c].fillna('').astype(str).str.strip()
     df[st_c] = df[st_c].fillna("غير محدد").astype(str).str.strip()
     
-    clean_all = df[df[id_c] != ''].copy() # يقرأ كل الأسطر التي تحتوي على كود دون تقييد بـ D-
+    clean_all = df[df[id_c] != ''].copy()
     clean_all[p_col] = pd.to_numeric(clean_all[p_col], errors='coerce').fillna(0)
     
     clean_ids = sorted([str(x).strip() for x in clean_all[id_c].unique() if str(x).strip() != ''])
@@ -45,15 +44,32 @@ mode = st.sidebar.radio("اختر وضع العرض:", ['🔍 تفاصيل طل�
 if st.sidebar.button("🔄 تحديث البيانات حياً"):
     st.cache_data.clear()
     st.rerun()
-if clean_all.empty:
-    st.error("⚠️ لم يتم العثور على بيانات. تأكد من إدخال البيانات في الشيت وفتح الصلاحية للعامة.")
+ if clean_all.empty:
+    st.error("⚠️ لم يتم العثور على بيانات حية. تأكد من صلاحيات الشيت.")
 else:
     if 'Single' in mode:
-        selected_id = st.sidebar.selectbox("اختر كود الطلب:", clean_ids)
-        row = clean_all[clean_all[id_c] == selected_id].iloc[0]
-        for col in df.columns:
-            if "رابط" in col or "parsed" in col or "Unnamed" in str(col): continue
-            st.markdown(f"<div style='direction:ltr; text-align:left; padding:10px; margin-bottom:5px; background:#fff; border-left:5px solid #5c2575; border-radius:4px;'>📚 <b>{col}:</b> {str(row[col]).strip()}</div>", unsafe_allow_html=True)
+        selected_id = st.sidebar.selectbox("اختر كود الطلب المستهدف:", clean_ids)
+        # إصلاح وتأمين جلب تفاصيل السطر بالكامل وعرضه بشكل فاخر ومباشر
+        matching_data = clean_all[clean_all[id_c] == selected_id]
+        if not matching_data.empty:
+            row = matching_data.iloc[0]
+            st.markdown(f"<div style='background:#5c2575; padding:10px; color:white; border-radius:6px; margin-bottom:15px;'><b>📌 كشف التفاصيل الكاملة لكود الطلب: {selected_id}</b></div>", unsafe_allow_html=True)
+            
+            for col in df.columns:
+                if "Unnamed" in str(col) or col in ['parsed_date_only', 'parsed_dt']: continue
+                val = str(row[col]).strip() if pd.notna(row[col]) else "—"
+                
+                # إخفاء الخانات الصفرية للكتب لتبدو الفاتورة نظيفة ومريحة
+                if any(k in col.lower() for k in ["book", "كتاب", "ألبوم"]) and val in ["0", "0.0", "0.00"]: continue
+                
+                st.markdown(f"""
+                <div style='direction:ltr; text-align:left; padding:12px 16px; margin-bottom:6px; background:#fff; border-left:5px solid #5c2575; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.05);'>
+                    <span style='color:#7f8c8d; font-weight:bold;'>{col}:</span> 
+                    <span style='color:#2c3e50; font-weight:bold; margin-left:10px;'>{val}</span>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.warning("لم يتم العثور على تفاصيل لهذا الكود.")
     else:
         selected_status = st.sidebar.selectbox("اختر الحالة للفرز:", clean_statuses)
         selected_time = st.sidebar.selectbox("اختر النطاق الزمني:", ['كل الأوقات', 'طلبات اليوم فقط', 'طلبات هذا الأسبوع'])
@@ -70,7 +86,6 @@ else:
             if 'اليوم' in selected_time: period_data = period_data[period_data[date_col] == today_date]
             elif 'الأسبوع' in selected_time: period_data = period_data[period_data[date_col] >= (today_date - datetime.timedelta(days=7))]
 
-        # العدادات العلوية الثلاثة
         u_period = period_data.drop_duplicates(subset=[id_c])
         c_del = len(u_period[u_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)])
         c_shp = len(u_period[u_period[st_c].str.contains('شحن|طريق|مندوب|Shipping', na=False, case=False)])
@@ -90,7 +105,6 @@ else:
         ck1.markdown(f"<div style='background:#2ecc71; padding:12px; color:white; text-align:right;'><b>💵 كاش مستلم فعلياً بالخزينة:<br><span style='font-size:18px;'>{r_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
         ck2.markdown(f"<div style='background:#e67e22; padding:12px; color:white; text-align:right;'><b>⏳ مبالغ معلقة قيد التوصيل:<br><span style='font-size:18px;'>{p_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
 
-        # جدول تفاصيل الطلبيات الحالية
         st.markdown("<br><b>💎 كشف الحساب التفصيلي للطلبيات الحالية:</b>", unsafe_allow_html=True)
         t_rows = ""
         for idx, row in tbl.drop_duplicates(subset=[id_c]).iterrows():
@@ -99,11 +113,10 @@ else:
             t_rows += f"<tr><td style='padding:8px; border-bottom:1px solid #eee;'>{row[id_c]}</td><td style='padding:8px; border-bottom:1px solid #eee;'>{row[name_col]}</td><td style='padding:8px; border-bottom:1px solid #eee;'>{b_summary}</td><td style='padding:8px; border-bottom:1px solid #eee; text-align:center;'>{row[p_col]:,.0f} LYD</td></tr>"
         
         if t_rows:
-            st.markdown(f"<table style='width:100%; border-collapse:collapse; direction:rtl;'><thead><tr style='background:#5c2575; color:white;'><th style='padding:10px; text-align:right;'>🆔 الكود</th><th style='padding:10px; text-align:right;'>👤 الاسم</th><th style='padding:10px; text-align:right;'>📚 تفاصيل المنتجات</th><th style='padding:10px; text-align:center;'>💰 السعر</th></tr></thead><tbody>{t_rows}</tbody></table>", unsafe_allow_html=True)
+            st.markdown(f"<table style='width:100%; border-collapse:collapse; direction:rtl;'><thead><tr style='background:#5c2575; color:white;'><th style='padding:10px; text-align:right;'>🆔  الكود</th><th style='padding:10px; text-align:right;'>👤 الاسم</th><th style='padding:10px; text-align:right;'>📚 تفاصيل المنتجات</th><th style='padding:10px; text-align:center;'>💰 السعر</th></tr></thead><tbody>{t_rows}</tbody></table>", unsafe_allow_html=True)
         else:
-            st.markdown("<div style='padding:10px; background:#fff; border:1px solid #eee;'>لا توجد طلبيات مسجلة في هذه الحالة حالياً. جرب تغيير الحالة من القائمة الجانبية.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='padding:10px; background:#fff; border:1px solid #eee;'>لا توجد طلبيات مسجلة في هذه الحالة حالياً.</div>", unsafe_allow_html=True)
 
-        # الرسوم البيانية
         st.markdown("<br><b>📊 التحليلات البيانية المتقدمة / Financial Analytics:</b>", unsafe_allow_html=True)
         cc1, cc2 = st.columns(2)
         with cc1:
@@ -123,7 +136,6 @@ else:
                 ax2.grid(axis='y', linestyle='--', alpha=0.5)
                 st.pyplot(fig2)
 
-        # لوحة صدارة مبيعات الكتب
         st.markdown("<br><div style='background:#117a65; padding:6px; color:white; text-align:center; border-radius:4px;'><b>📈 لوحة صدارة مبيعات الكتب وعوائدها (المستلمة فقط) / Delivered Books Leaderboard</b></div>", unsafe_allow_html=True)
         b_cols = [c for c in clean_all.columns if any(k in c.lower() for k in ["book", "كتاب", "ألبوم"])]
         
@@ -157,17 +169,3 @@ else:
                 with tb_b:
                     sub_rows = "".join([f"<tr><td style='padding:6px; border-bottom:1px solid #eee;'>{r['Arabic']}</td><td style='padding:6px; border-bottom:1px solid #eee; text-align:center;'>{r['Qty']} قطعة</td><td style='padding:6px; border-bottom:1px solid #eee; text-align:center; color:#117a65;'>{r['Rev']:,.0f} LYD</td></tr>" for i, r in df_b.iterrows()])
                     st.markdown(f"<table style='width:100%; border-collapse:collapse; direction:rtl; font-size:12px; margin-top:20px;'><thead><tr style='background:#117a65; color:white;'><th style='padding:8px; text-align:right;'>📚 نوع المنتج</th><th style='padding:8px; text-align:center;'>🔢 الكمية</th><th style='padding:8px; text-align:center;'>💰 الصافي</th></tr></thead><tbody>{sub_rows}</tbody></table>", unsafe_allow_html=True)
-            else:
-                st.markdown("<div style='padding:10px; background:#fff; border:1px solid #eee;'>لا توجد مبيعات كتب مستلمة حالياً في النظام لتظهر في لوحة الصدارة.</div>", unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
-
-
-
