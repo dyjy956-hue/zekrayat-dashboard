@@ -7,29 +7,21 @@ import time
 import re
 
 # إعدادات الصفحة
-st.set_page_config(
-    page_title="لوحة تحكم متجر ذكريات / Zekrayat Dashboard",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="لوحة تحكم متجر ذكريات", layout="wide")
 
 # دالة تطهير الإيموجي للرسم
 def clean_emojis_for_chart(text_str):
     return re.sub(r'[^\w\s\(\)\-\/:]', '', str(text_str)).strip()
 
-# دالة الأيقونات الذكية للبطاقات
 def get_icon(col_name):
     c = str(col_name).lower()
     if 'كود' in c or 'code' in c: return '🆔'
     if 'اسم' in c or 'name' in c or 'زبون' in c: return '👤'
-    if 'هاتف' in c or 'phone' in c or 'رقم' in c: return '📞'
-    if 'سعر' in c or 'إجمالي' in c or 'total' in c or 'price' in c: return '💰'
+    if 'سعر' in c or 'إجمالي' in c or 'price' in c: return '💰'
     if 'حالة' in c or 'status' in c: return '🚦'
-    if 'تاريخ' in c or 'date' in c or 'time' in c: return '📅'
-    if 'عنوان' in c or 'مكان' in c or 'address' in c: return '📍'
     return '📚'
 
-# --- جلب البيانات السحابية مع معالجة ذكية ---
+# --- جلب البيانات السحابية ---
 base_url = "https://docs.google.com/spreadsheets/d/1i7lTyW3PIcryPWgdpS8hr_43ZJ1aEYHrW0PFl8oxM5Q/export?format=xlsx"
 
 @st.cache_data(ttl=300)
@@ -39,50 +31,39 @@ def fetch_data(url):
         df = pd.read_excel(cache_url, sheet_name=0)
         return df, True
     except Exception as e:
-        st.warning(f"⚠️ تعذر الاتصال بالسحابة: {e}. يتم عرض آخر بيانات متاحة.")
+        st.warning(f"⚠️ تعذر الاتصال بالسحابة: {e}.")
         return pd.DataFrame(), False
 
-# تنفيذ الجلب
 df, success = fetch_data(base_url)
 
+# إعداد البيانات
 if success and not df.empty:
-    id_c = [c for c in df.columns if "كود" in c or "Code" in c][0]
-    st_cols = [c for c in df.columns if "حالة" in c or "Status" in c]
-    st_c = st_cols[0] if st_cols else "الحالة"
-    
-    df[id_c] = df[id_c].fillna('').astype(str).str.strip()
-    df[st_c] = df[st_c].fillna("غير محدد / Unspecified").astype(str).str.strip()
-    
-    clean_all_temp = df[df[id_c].str.startswith('D-', na=False)]
-    clean_ids = sorted([str(x).strip() for x in clean_all_temp[id_c].unique() if str(x).strip() != ''])
-    clean_statuses = sorted([str(x).strip() for x in df[st_c].unique() if str(x).strip() != ''])
-else:
-    clean_ids = ['D-ORD-1', 'D-ORD-2', 'D-ORD-3', 'D-ORD-4', 'D-ORD-5', 'D-ORD-6']
-    clean_statuses = ['تسليم', 'قيد الشحن', 'قيد التجهيز', 'غير محدد / Unspecified']
-
-# تصفية وتجهيز الأعمدة
-if not df.empty:
     df = df.loc[:, ~df.columns.astype(str).str.contains('^Unnamed')]
-    df = df.dropna(how='all', axis=1)
+    id_c = [c for c in df.columns if "كود" in c or "Code" in c][0]
+    st_c = [c for c in df.columns if "حالة" in c or "Status" in c][0]
+    p_col = [c for c in df.columns if "السعر" in c or "Price" in c][0]
+    name_col = [c for c in df.columns if "اسم" in c or "Name" in c][0]
     
-    p_cols = [c for c in df.columns if "السعر" in c or "الإجمالي" in c or "Price" in c or "Total" in c]
-    p_col = p_cols[0] if p_cols else "السعر الصافي"
-    if p_col not in df.columns: df[p_col] = 0
-    
-    name_cols = [c for c in df.columns if "اسم" in c or "الزبون" in c or "العميل" in c or "Name" in c]
-    name_col = name_cols[0] if name_cols else df.columns[1]
-    
-    clean_all = df[df[id_c].fillna('').astype(str).str.strip().str.startswith('D-')].copy()
-    clean_all[st_c] = clean_all[st_c].fillna("غير محدد / Unspecified").astype(str).str.strip()
-    clean_all[p_col] = pd.to_numeric(clean_all[p_col], errors='coerce').fillna(0)
-    
-    t_cols = [c for c in df.columns if "تاريخ" in c or "Timestamp" in c or "Date" in c]
-    date_col = 'parsed_date_only' if t_cols else None
-    if t_cols:
-        clean_all['parsed_dt'] = pd.to_datetime(clean_all[t_cols[0]], errors='coerce')
-        clean_all['parsed_date_only'] = clean_all['parsed_dt'].dt.date
+    clean_all = df.copy()
+    clean_ids = sorted(df[id_c].dropna().astype(str).unique())
+    clean_statuses = sorted(df[st_c].dropna().astype(str).unique())
 else:
-    clean_all = pd.DataFrame()
+    st.error("البيانات غير متاحة حالياً.")
+    st.stop()
 
-# [بقية كود الواجهة والرسوم البيانية...]
-# (بإمكانك لصق بقية الكود الأصلي الخاص بك من هنا للأسفل)
+# الواجهة
+st.markdown("<h2 style='text-align:center;'>📊 لوحة التحكم التنفيذية - متجر ذكريات</h2>", unsafe_allow_html=True)
+mode = st.sidebar.radio("وضع العرض:", ['تفاصيل طلبية', 'عرض التقارير'])
+
+if 'تفاصيل' in mode:
+    selected_id = st.sidebar.selectbox("اختر كود الطلب:", clean_ids)
+    row = df[df[id_c] == selected_id].iloc[0]
+    for col in df.columns:
+        st.info(f"**{col}**: {row[col]}")
+else:
+    # التقارير
+    st.write("### 📈 التحليلات")
+    status_counts = df[st_c].value_counts()
+    fig, ax = plt.subplots()
+    ax.bar(status_counts.index, status_counts.values)
+    st.pyplot(fig)
