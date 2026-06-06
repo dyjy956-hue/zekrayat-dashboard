@@ -13,18 +13,23 @@ def clean_emojis_for_chart(text_str):
 base_url = "https://docs.google.com/spreadsheets/d/1i7lTyW3PIcryPWgdpS8hr_43ZJ1aEYHrW0PFl8oxM5Q/export?format=xlsx"
 try:
     df = pd.read_excel(f"{base_url}&cache_bust={int(time.time())}", sheet_name=0)
-    id_c = [c for c in df.columns if any(k in c for k in ["كود", "Code"])][0] if [c for c in df.columns if any(k in c for k in ["كود", "Code"])] else df.columns[0]
-    st_c = [c for c in df.columns if any(k in c for k in ["حالة", "Status"])][0] if [c for c in df.columns if any(k in c for k in ["حالة", "Status"])] else df.columns[4]
-    p_col = [c for c in df.columns if any(k in c for k in ["سعر", "إجمالي", "Price", "Total"])][0] if [c for c in df.columns if any(k in c for k in ["سعر", "إجمالي", "Price", "Total"])] else df.columns[-1]
-    name_col = [c for c in df.columns if any(k in c for k in ["اسم", "زبون", "عميل", "Name"])][0] if [c for c in df.columns if any(k in c for k in ["اسم", "زبون", "عميل", "Name"])] else df.columns[1]
+    
+    # تثبيت أسماء الأعمدة الصريحة لمتجر ذكريات لضمان عدم الاختفاء
+    id_c = [c for c in df.columns if any(k in c for k in ["كود", "Code"])][0]
+    st_c = [c for c in df.columns if any(k in c for k in ["حالة", "Status"])][0]
+    p_col = [c for c in df.columns if any(k in c for k in ["سعر", "إجمالي", "Price", "Total"])][0]
+    name_col = [c for c in df.columns if any(k in c for k in ["اسم", "زبون", "عميل", "Name"])][0]
     
     df[id_c] = df[id_c].fillna('').astype(str).str.strip()
     df[st_c] = df[st_c].fillna("غير محدد").astype(str).str.strip()
+    
     clean_all = df[df[id_c] != ''].copy()
     clean_all[p_col] = pd.to_numeric(clean_all[p_col], errors='coerce').fillna(0)
+    
     clean_ids = sorted([str(x).strip() for x in clean_all[id_c].unique() if str(x).strip() != ''])
     clean_statuses = sorted([str(x).strip() for x in clean_all[st_c].unique() if str(x).strip() != ''])
-except:
+except Exception as e:
+    st.error(f"⚠️ خطأ في مطابقة أعمدة الشيت: تأكد من وجود أعمدة باسم (كود، حالة، سعر، اسم). التفاصيل: {e}")
     clean_ids, clean_statuses, df, clean_all = ['1'], ['تسليم'], pd.DataFrame(), pd.DataFrame()
 
 date_col = None
@@ -42,9 +47,7 @@ if st.sidebar.button("🔄 تحديث البيانات حياً"):
     st.cache_data.clear()
     st.rerun()
 
-if clean_all.empty:
-    st.error("⚠️ لم يتم العثور على بيانات حية. تأكد من صلاحيات الشيت للعامة.")
-else:
+if not clean_all.empty:
     if 'Single' in mode:
         selected_id = st.sidebar.selectbox("اختر كود الطلب المستهدف:", clean_ids)
         matching_data = clean_all[clean_all[id_c] == selected_id]
@@ -55,7 +58,7 @@ else:
                 if "Unnamed" in str(col) or col in ['parsed_date_only', 'parsed_dt']: continue
                 val = str(row[col]).strip() if pd.notna(row[col]) else "—"
                 if any(k in col.lower() for k in ["book", "كتاب", "ألبوم"]) and val in ["0", "0.0", "0.00"]: continue
-                st.markdown(f"<div style='direction:ltr; text-align:left; padding:12px 16px; margin-bottom:6px; background:#fff; border-left:5px solid #5c2575; border-radius:4px;'><span style='color:#7f8c8d; font-weight:bold;'>{col}:</span> <span style='color:#2c3e50; font-weight:bold; margin-left:10px;'>{val}</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='direction:ltr; text-align:left; padding:12px 16px; margin-bottom:6px; background:#fff; border-left:5px solid #5c2575; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.05);'><span style='color:#7f8c8d; font-weight:bold;'>{col}:</span> <span style='color:#2c3e50; font-weight:bold; margin-left:10px;'>{val}</span></div>", unsafe_allow_html=True)
     else:
         selected_status = st.sidebar.selectbox("اختر الحالة للفرز:", clean_statuses)
         selected_time = st.sidebar.selectbox("اختر النطاق الزمني:", ['كل الأوقات', 'طلبات اليوم فقط', 'طلبات هذا الأسبوع'])
@@ -120,3 +123,13 @@ else:
                 ax2.bar(eng_lbls, status_counts.values, color=['#2ecc71' if x=='Delivered' else '#e67e22' for x in eng_lbls], width=0.3)
                 ax2.set_title("Operational Workspace Load", fontsize=9, weight='bold')
                 ax2.grid(axis='y', linestyle='--', alpha=0.5)
+                st.pyplot(fig2)
+
+        st.markdown("<br><div style='background:#117a65; padding:6px; color:white; text-align:center; border-radius:4px;'><b>📈 لوحة صدارة مبيعات الكتب وعوائدها (المستلمة فقط) / Delivered Books Leaderboard</b></div>", unsafe_allow_html=True)
+        b_cols = [c for c in clean_all.columns if any(k in c.lower() for k in ["book", "كتاب", "ألبوم"])]
+        if b_cols:
+            del_orders = u_period[u_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)]
+            b_list = []
+            for col_b in b_cols:
+                m_head = re.search(r'\[(.*?)\]', col_b)
+                ar
