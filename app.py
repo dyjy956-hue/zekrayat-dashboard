@@ -35,19 +35,15 @@ try:
     live_url = f"{base_url}&cache_bust={int(time.time())}"
     df = pd.read_excel(live_url, sheet_name=0) # يقرأ أول تبويب تلقائياً
     
-    # تحديد الأعمدة بمرونة عالية لمنع الانهيار
     id_c = [c for c in df.columns if "كود" in c or "Code" in c][0]
-    
     st_cols = [c for c in df.columns if "حالة" in c or "Status" in c]
     st_c = st_cols[0] if st_cols else "الحالة"
-    if st_c not in df.columns: df[st_c] = "غير محدد / Unspecified"
     
     df[id_c] = df[id_c].fillna('').astype(str).str.strip()
+    df[st_c] = df[st_c].fillna("غير محدد / Unspecified").astype(str).str.strip()
+    
     clean_all_temp = df[df[id_c].str.startswith('D-', na=False)]
     clean_ids = sorted([str(x).strip() for x in clean_all_temp[id_c].unique() if str(x).strip() != ''])
-    
-    # تعبئة الحالات الفارغة بنص افتراضي لتظهر في القائمة الجانبية
-    df[st_c] = df[st_c].fillna("غير محدد / Unspecified").astype(str).str.strip()
     clean_statuses = sorted([str(x).strip() for x in df[st_c].unique() if str(x).strip() != ''])
 except:
     clean_ids = ['D-ORD-1', 'D-ORD-2', 'D-ORD-3', 'D-ORD-4', 'D-ORD-5', 'D-ORD-6']
@@ -66,7 +62,6 @@ if not df.empty:
     name_cols = [c for c in df.columns if "اسم" in c or "الزبون" in c or "العميل" in c or "Name" in c]
     name_col = name_cols[0] if name_cols else df.columns[1]
     
-    # جلب كافة الطلبيات التي تبدأ بـ D- حتى لو كانت بقية خلاياها فارغة
     clean_all = df[df[id_c].fillna('').astype(str).str.strip().str.startswith('D-')].copy()
     clean_all[st_c] = clean_all[st_c].fillna("غير محدد / Unspecified").astype(str).str.strip()
     clean_all[p_col] = pd.to_numeric(clean_all[p_col], errors='coerce').fillna(0)
@@ -176,6 +171,42 @@ else:
         elif 'This Week' in selected_time: 
             period_data = period_data[(period_data[date_col] >= start_of_week_date) & (period_data[date_col] <= today_date)]
 
+    # --- 🏗️ حساب الأعداد الإحصائية للأزرار الملونة الجديدة حياً لمنع التداخل ---
+    unique_all_period = period_data.drop_duplicates(subset=[id_c])
+    
+    count_delivered = len(unique_all_period[unique_all_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)])
+    count_shipping = len(unique_all_period[unique_all_period[st_c].str.contains('شحن|طريق|مندوب|Shipping|Shipped', na=False, case=False)])
+    count_preparing = len(unique_all_period[unique_all_period[st_c].str.contains('تجهيز|تحضير|ورشة|Preparing|Process', na=False, case=False)])
+    
+    # --- 🎨 بناء واجهة الأزرار الملونة الضخمة العلویة بنظام المربعات التنفيذية ---
+    col_btn1, col_btn2, col_btn3 = st.columns(3)
+    
+    with col_btn1:
+        st.markdown(f"""
+        <div style='background: linear-gradient(135deg, #2ecc71, #27ae60); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.2);'>
+            <span style='font-size: 28px; font-weight: bold; display: block;'>{count_delivered}</span>
+            <span style='font-size: 14px; font-family: tahoma; font-weight: bold;'>📦 عدد الطلبات المستلمة / Delivered</span>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col_btn2:
+        st.markdown(f"""
+        <div style='background: linear-gradient(135deg, #e67e22, #d35400); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(230, 126, 34, 0.2);'>
+            <span style='font-size: 28px; font-weight: bold; display: block;'>{count_shipping}</span>
+            <span style='font-size: 14px; font-family: tahoma; font-weight: bold;'>🚚 في الشحن والتوصيل / In Shipping</span>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col_btn3:
+        st.markdown(f"""
+        <div style='background: linear-gradient(135deg, #3498db, #2980b9); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.2);'>
+            <span style='font-size: 28px; font-weight: bold; display: block;'>{count_preparing}</span>
+            <span style='font-size: 14px; font-family: tahoma; font-weight: bold;'>🛠️ طلبات تحت التجهيز / Preparing</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
     grp_o = len(tbl.drop_duplicates(subset=[id_c]))
     tbl_delivered_unique = tbl[tbl[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
     grp_m = tbl_delivered_unique[p_col].sum()
@@ -188,16 +219,16 @@ else:
     clean_time_display = clean_emojis_for_chart(selected_time)
 
     # 1️⃣ التقرير الأول: كشف التدفق النقدي الفوري
-    st.markdown(f"<div style='background:#e67e22; padding:10px; color:white; text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>📋 كشف الأداء / Performance KPIs: {selected_status} ({clean_time_display}) | العدد / Count: {grp_o} | القيمة / Revenue: {grp_m:,} LYD 💰</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background:#5c2575; padding:10px; color:white; text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>📋 كشف أداء الحزمة الحالية المستهدفة: {selected_status} ({clean_time_display}) | العدد: {grp_o} | القيمة المستلمة للحزمة: {grp_m:,} LYD 💰</div>", unsafe_allow_html=True)
     
     col_kpi1, col_kpi2 = st.columns(2)
     with col_kpi1:
-        st.markdown(f"<div style='background:#2ecc71; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>💵 أرباح مستلمة فعلياً بالخزينة / Received Cash:<br><span style='font-size:20px;'>{received_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#2ecc71; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>💵 إجمالي السيولة المستلمة بالخزينة (للنطاق الحالي):<br><span style='font-size:20px;'>{received_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
     with col_kpi2:
-        st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ أرباح معلقة في التوصيل / Pending Cash:<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ إجمالي أرباح معلقة في التوصيل (للنطاق الحالي):<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
 
     # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي
-    st.markdown("<br><div style='background:#5c2575; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>💎 لوحة التقارير المالية التفصيلية لطلبيات الحزمة / Detailed Financial Statement</b></div>", unsafe_allow_html=True)
+    st.markdown("<br><div style='background:#2c3e50; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>💎 لوحة التقارير المالية التفصيلية لطلبيات الحزمة / Detailed Financial Statement</b></div>", unsafe_allow_html=True)
     
     table_rows = ""
     grand_total_rev = 0
@@ -219,8 +250,6 @@ else:
                     row_books.append(f"{b_title} ({int(float(b_val))})")
 
         books_summary_str = " + ".join(row_books) if row_books else "مبيعات متنوعة / Misc Items"
-        
-        # وضع تنبيه مرئي إذا كان السعر صفراً لتنبيه الإدارة يدوياً
         price_display = f"{order_price:,.0f} LYD" if order_price > 0 else "⚠️ 0 LYD (Not Set)"
 
         table_rows += f"""<tr>
