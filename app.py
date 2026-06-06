@@ -1,4 +1,4 @@
-  # -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,18 +6,15 @@ import datetime
 import time
 import re
 
-# إعدادات الصفحة الافتراضية لواجهة الويب الفاخرة
 st.set_page_config(
-    page_title="لوحة تحكم متجر ذكريات / Zekrayat Dashboard",
+    page_title="Zekrayat Dashboard",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# دالة تطهير الإيموجي للرسم
 def clean_emojis_for_chart(text_str):
     return re.sub(r'[^\w\s\(\)\-\/:]', '', str(text_str)).strip()
 
-# دالة الأيقونات الذكية للبطاقات
 def get_icon(col_name):
     c = str(col_name).lower()
     if 'كود' in c or 'code' in c: return '🆔'
@@ -33,7 +30,7 @@ def get_icon(col_name):
 base_url = "https://docs.google.com/spreadsheets/d/1i7lTyW3PIcryPWgdpS8hr_43ZJ1aEYHrW0PFl8oxM5Q/export?format=xlsx"
 try:
     live_url = f"{base_url}&cache_bust={int(time.time())}"
-    df = pd.read_excel(live_url, sheet_name=0) # يقرأ أول تبويب تلقائياً
+    df = pd.read_excel(live_url, sheet_name=0)
     
     id_c = [c for c in df.columns if "كود" in c or "Code" in c][0]
     st_cols = [c for c in df.columns if "حالة" in c or "Status" in c]
@@ -46,11 +43,10 @@ try:
     clean_ids = sorted([str(x).strip() for x in clean_all_temp[id_c].unique() if str(x).strip() != ''])
     clean_statuses = sorted([str(x).strip() for x in df[st_c].unique() if str(x).strip() != ''])
 except:
-    clean_ids = ['D-ORD-1', 'D-ORD-2', 'D-ORD-3', 'D-ORD-4', 'D-ORD-5', 'D-ORD-6']
-    clean_statuses = ['تسليم', 'قيد الشحن', 'قيد التجهيز', 'غير محدد / Unspecified']
+    clean_ids = ['D-ORD-1', 'D-ORD-2']
+    clean_statuses = ['تسليم', 'قيد الشحن']
     df = pd.DataFrame()
 
-# تصفية وتجهيز الأعمدة
 if not df.empty:
     df = df.loc[:, ~df.columns.astype(str).str.contains('^Unnamed')]
     df = df.dropna(how='all', axis=1)
@@ -72,7 +68,6 @@ if not df.empty:
         clean_all['parsed_dt'] = pd.to_datetime(clean_all[t_cols[0]], errors='coerce')
         clean_all['parsed_date_only'] = clean_all['parsed_dt'].dt.date
 
-# تنسيق الواجهة عبر CSS
 st.markdown("""
     <style>
         .stRadio [data-testid="stMarkdownContainer"] p {
@@ -85,29 +80,42 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<div style='background-color:#2c3e50; padding:15px; border-radius:10px; text-align:center; color:white; font-family:tahoma; margin-bottom:20px;'><h2>📊 لوحة التحكم التنفيذية - متجر ذكريات الفاخر / Zekrayat Store Dashboard</h2></div>", unsafe_allow_html=True)
-st.sidebar.markdown("<div style='background-color:#5c2575; padding:8px; color:white; text-align:center; font-weight:bold; border-radius:4px;'>⚙️ لوحة الفرز والملاحة / Control Panel</div>", unsafe_allow_html=True)
+header_html = "<div style='background-color:#2c3e50; padding:15px; "
+header_html += "border-radius:10px; text-align:center; color:white; "
+header_html += "margin-bottom:20px;'><h2>📊 لوحة التحكم التنفيذية - متجر ذكريات الفاخر</h2></div>"
+st.markdown(header_html, unsafe_allow_html=True)
+
+sidebar_html = "<div style='background-color:#5c2575; padding:8px; "
+sidebar_html += "color:white; text-align:center; font-weight:bold; "
+sidebar_html += "border-radius:4px;'>⚙️ لوحة الفرز والملاحة / Control Panel</div>"
+st.sidebar.markdown(sidebar_html, unsafe_allow_html=True)
 
 mode = st.sidebar.radio(
     "اختر وضع العرض المطلوب / Select View Mode:",
     ['🔍 تفاصيل طلبية واحدة / Single Order Inquiry', '📊 عرض المجموعات والتقارير / Executive Analytics']
 )
 
-# زر التحديث الحي المباشر من السحاب
 if st.sidebar.button("🔄 تحديث حياً وجلب البيانات الفورية / Live Fetch Sync", use_container_width=True):
     st.cache_data.clear()
     st.rerun()
 
 if 'Single' in mode:
     selected_id = st.sidebar.selectbox("اختر كود الطلب المستهدف / Select Order Code:", clean_ids)
-    
     delivered_global_mask = clean_all[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)
     tot_o = len(clean_all.drop_duplicates(subset=[id_c]))
     unique_delivered = clean_all[delivered_global_mask].drop_duplicates(subset=[id_c])
     tot_m = unique_delivered[p_col].sum()
     
-    st.markdown(f"<div style='background:linear-gradient(135deg, #5c2575, #7d3c98); padding:14px; color:white; text-align:right; font-family:tahoma; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1);'><b>📊 إجمالي الطلبات الفريدة بالمنظومة / Total Orders: {tot_o} | 💰 مبيعات الخزينة الكلية المحققة / Total Cash: {tot_m:,} LYD</b></div>", unsafe_allow_html=True)
-    st.markdown(f"<div style='background:#2c3e50; padding:10px; color:white; text-align:right; margin-top:10px; border-radius:6px; font-family:tahoma;'><b>📌 تفاصيل كود الطلب الحالي / Current Order: {selected_id}</b></div>", unsafe_allow_html=True)
+    ban1_html = "<div style='background:linear-gradient(135deg, #5c2575, #7d3c98); "
+    ban1_html += "padding:14px; color:white; text-align:right; border-radius:8px; "
+    ban1_html += "box-shadow:0 4px 10px rgba(0,0,0,0.1);'>"
+    ban1_html += f"<b>📊 إجمالي الطلبات الفريدة: {tot_o} | 💰 مبيعات الخزينة الكلية المحققة: {tot_m:,} LYD</b></div>"
+    st.markdown(ban1_html, unsafe_allow_html=True)
+    
+    ban2_html = "<div style='background:#2c3e50; padding:10px; color:white; "
+    ban2_html += "text-align:right; margin-top:10px; border-radius:6px;'> "
+    ban2_html += f"<b>📌 تفاصيل كود الطلب الحالي: {selected_id}</b></div>"
+    st.markdown(ban2_html, unsafe_allow_html=True)
     st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
     
     matching_rows = df[df[id_c].fillna('').astype(str).str.strip() == str(selected_id).strip()]
@@ -139,13 +147,13 @@ if 'Single' in mode:
                 fsz = '14px' if col == p_col else '13px'
                 val_element = f"<span style='color:{clr}; font-weight:bold; font-size:{fsz}; font-family:tahoma;'>{v_str}</span>"
             
-            st.markdown(f"""
-            <div style="direction: ltr; text-align: left; padding: 12px 16px; margin-bottom: 8px; background: #ffffff; border-left: 5px solid #5c2575; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center;">
-                <div style="font-size: 16px; margin-right: 12px;">{ico}</div>
-                <div style="min-width: 220px; color: #7f8c8d; font-weight: bold; font-family: tahoma; font-size: 13px;">{clean_display_header}</div>
-                <div style="flex-grow: 1;">{val_element}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            card_html = "<div style='direction: ltr; text-align: left; padding: 12px 16px; "
+            card_html += "margin-bottom: 8px; background: #ffffff; border-left: 5px solid #5c2575; "
+            card_html += "border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center;'>"
+            card_html += f"<div style='font-size: 16px; margin-right: 12px;'>{ico}</div>"
+            card_html += f"<div style='min-width: 220px; color: #7f8c8d; font-weight: bold; font-size: 13px;'>{clean_display_header}</div>"
+            card_html += f"<div style='flex-grow: 1;'>{val_element}</div></div>"
+            st.markdown(card_html, unsafe_allow_html=True)
 
 else:
     selected_status = st.sidebar.selectbox("اختر حالة المجموعة بالتصفية / Filter by Status:", clean_statuses)
@@ -160,18 +168,13 @@ else:
     period_data = clean_all.copy()
 
     if date_col and not tbl.empty:
-        if 'Today' in selected_time: 
-            tbl = tbl[tbl[date_col] == today_date]
-        elif 'This Week' in selected_time: 
-            tbl = tbl[(tbl[date_col] >= start_of_week_date) & (tbl[date_col] <= today_date)]
+        if 'Today' in selected_time: tbl = tbl[tbl[date_col] == today_date]
+        elif 'This Week' in selected_time: tbl = tbl[(tbl[date_col] >= start_of_week_date) & (tbl[date_col] <= today_date)]
             
     if date_col and not period_data.empty:
-        if 'Today' in selected_time: 
-            period_data = period_data[period_data[date_col] == today_date]
-        elif 'This Week' in selected_time: 
-            period_data = period_data[(period_data[date_col] >= start_of_week_date) & (period_data[date_col] <= today_date)]
+        if 'Today' in selected_time: period_data = period_data[period_data[date_col] == today_date]
+        elif 'This Week' in selected_time: period_data = period_data[(period_data[date_col] >= start_of_week_date) & (period_data[date_col] <= today_date)]
 
-    # --- حساب الأعداد الإحصائية للأزرار الملونة ---
     unique_all_period = period_data.drop_duplicates(subset=[id_c])
     count_delivered = len(unique_all_period[unique_all_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)])
     count_shipping = len(unique_all_period[unique_all_period[st_c].str.contains('شحن|طريق|مندوب|Shipping|Shipped', na=False, case=False)])
@@ -188,26 +191,31 @@ else:
     st.markdown("<br>", unsafe_allow_html=True)
 
     grp_o = len(tbl.drop_duplicates(subset=[id_c]))
-    tbl_delivered_unique = tbl[tbl[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
-    grp_m = tbl_delivered_unique[p_col].sum()
+    
+    mask_del_tbl = tbl[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)
+    tbl_del_u = tbl[mask_del_tbl].drop_duplicates(subset=[id_c])
+    grp_m = tbl_del_u[p_col].sum()
 
-    delivered_unique_period = period_data[period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
-    pending_unique_period = period_data[~period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
+    mask_del_per = period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)
+    delivered_unique_period = period_data[mask_del_per].drop_duplicates(subset=[id_c])
+    pending_unique_period = period_data[~mask_del_per].drop_duplicates(subset=[id_c])
+    
     received_sales = delivered_unique_period[p_col].sum()
     pending_sales = pending_unique_period[p_col].sum()
 
     clean_time_display = clean_emojis_for_chart(selected_time)
 
-    # 1️⃣ التقرير الأول: كشف التدفق النقدي الفوري
-    st.markdown(f"<div style='background:#5c2575; padding:10px; color:white; text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>📋 كشف أداء الحزمة الحالية المستهدفة: {selected_status} ({clean_time_display}) | العدد: {grp_o} | القيمة المستلمة للحزمة: {grp_m:,} LYD 💰</div>", unsafe_allow_html=True)
+    ban3_html = "<div style='background:#5c2575; padding:10px; color:white; "
+    ban3_html += "text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>"
+    ban3_html += f"📋 كشف أداء حزمة: {selected_status} ({clean_time_display}) | العدد: {grp_o} | القيمة المستلمة: {grp_m:,} LYD 💰</div>"
+    st.markdown(ban3_html, unsafe_allow_html=True)
     
     col_kpi1, col_kpi2 = st.columns(2)
     with col_kpi1:
-        st.markdown(f"<div style='background:#2ecc71; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>💵 إجمالي السيولة المستلمة بالخزينة (للنطاق الحالي):<br><span style='font-size:20px;'>{received_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#2ecc71; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>💵 إجمالي السيولة المستلمة بالخزينة:<br><span style='font-size:20px;'>{received_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
     with col_kpi2:
-        st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ إجمالي أرباح معلقة في التوصيل (للنطاق الحالي):<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ إجمالي أرباح معلقة في التوصيل:<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
 
-    # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي
     st.markdown("<br><div style='background:#2c3e50; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>💎 لوحة التقارير المالية التفصيلية لطلبيات الحزمة / Detailed Financial Statement</b></div>", unsafe_allow_html=True)
     
     table_rows = ""
@@ -230,49 +238,40 @@ else:
                     row_books.append(f"{b_title} ({int(float(b_val))})")
 
         books_summary_str = " + ".join(row_books) if row_books else "مبيعات متنوعة / Misc Items"
-        price_display = f"{order_price:,.0f} LYD" if order_price > 0 else "⚠️ 0 LYD (Not Set)"
+        price_display = f"{order_price:,.0f} LYD" if order_price > 0 else "⚠️ 0 LYD"
 
-        table_rows += f"""<tr>
-<td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'><span style='background:#eaf2f8; color:#2471a3; padding:4px 8px; border-radius:4px; font-weight:bold;'>{order_code}</span></td>
-<td style='padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold;'>{customer_name}</td>
-<td style='padding:10px; border-bottom:1px solid #eee; text-align:right; color:#5c2575; font-weight:bold;'>{books_summary_str}</td>
-<td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'><span style='background:#e8f8f5; color:#117a65; padding:4px 8px; border-radius:4px; font-weight:bold;'>{price_display}</span></td>
-</tr>"""
+        t_row_block = f"<tr><td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'> "
+        t_row_block += f"<span style='background:#eaf2f8; color:#2471a3; padding:4px 8px; border-radius:4px; font-weight:bold;'>{order_code}</span></td>"
+        t_row_block += f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold;'>{customer_name}</td>"
+        t_row_block += f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:right; color:#5c2575; font-weight:bold;'>{books_summary_str}</td>"
+        t_row_block += f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'> "
+        t_row_block += f"<span style='background:#e8f8f5; color:#117a65; padding:4px 8px; border-radius:4px; font-weight:bold;'>{price_display}</span></td></tr>"
+        table_rows += t_row_block
     
     if not target_orders.empty:
-        total_html_row = f"""<tr style='background-color:#ebdef0; font-weight:bold; color:#5c2575;'>
-<td colspan='3' style='padding:12px; text-align:right;'>📊 إجمالي صافي إيرادات الخزينة الكلية لهذه الحزمة / Total Net Revenue for Current Package</td>
-<td style='padding:12px; text-align:center;'><span style='background:#7d3c98; color:white; padding:5px 12px; border-radius:4px;'>{grand_total_rev:,.0f} LYD</span></td>
-</tr>"""
+        total_html_row = "<tr style='background-color:#ebdef0; font-weight:bold; color:#5c2575;'>"
+        total_html_row += "<td colspan='3' style='padding:12px; text-align:right;'>📊 إجمالي صافي إيرادات الخزينة الكلية لهذه الحزمة</td>"
+        total_html_row += f"<td style='padding:12px; text-align:center;'><span style='background:#7d3c98; color:white; padding:5px 12px; border-radius:4px;'>{grand_total_rev:,.0f} LYD</span></td></tr>"
         
-        html_table = f"""
-        <table style='width:100%; border-collapse:collapse; margin-top:10px; font-family:tahoma; direction:rtl; box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'>
-            <thead>
-                <tr style='background-color:#5c2575; color:white;'>
-                    <th style='padding:12px; text-align:right;'>🆔 كود الطلبية / Order Code</th>
-                    <th style='padding:12px; text-align:right;'>👤 اسم الزبون / Name</th>
-                    <th style='padding:12px; text-align:right;'>📚 مواصفات الحزمة / Package Details</th>
-                    <th style='padding:12px; text-align:center;'>💰 إجمالي السعر / Net Price</th>
-                </tr>
-            </thead>
-            <tbody>
-                {table_rows}
-                {total_html_row}
-            </tbody>
-        </table>
-        """
-        st.markdown(html_table, unsafe_allow_html=True)
+        tbl_head = "<table style='width:100%; border-collapse:collapse; margin-top:10px; font-family:tahoma; direction:rtl; "
+        tbl_head += "box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'><thead>"
+        tbl_head += "<tr style='background-color:#5c2575; color:white;'> "
+        tbl_head += "<th style='padding:12px; text-align:right;'>🆔 كود الطلبية</th>"
+        tbl_head += "<th style='padding:12px; text-align:right;'>👤 اسم الزبون</th>"
+        tbl_head += "<th style='padding:12px; text-align:right;'>📚 مواصفات الحزمة</th>"
+        tbl_head += "<th style='padding:12px; text-align:center;'>💰 إجمالي السعر</th></tr></thead>"
+        tbl_final = f"{tbl_head}<tbody>{table_rows}{total_html_row}</tbody></table>"
+        st.markdown(tbl_final, unsafe_allow_html=True)
     else:
-        st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لا توجد طلبيات مسجلة في هذا النطاق حالياً / No orders recorded.</div>", unsafe_allow_html=True)
+        st.markdown("لا توجد طلبيات مسجلة في هذا النطاق حالياً.")
 
-    # 3️⃣ التقرير الثالث: الرسوم البيانية الكلية
     st.markdown("<br><div style='background:#5c2575; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📊 الرسوم البيانية والتحليلات المتقدمة للمبيعات / Executive Visual Analytics</b></div>", unsafe_allow_html=True)
     col_chart1, col_chart2 = st.columns(2)
     
     with col_chart1:
         if received_sales > 0 or pending_sales > 0:
             fig1, ax1 = plt.subplots(figsize=(6, 4))
-            ax1.pie([received_sales, pending_sales], labels=['Received Revenue', 'Pending Revenue'], 
+            ax1.pie([received_sales, pending_sales], labels=['Received Cash', 'Pending Cash'], 
                     autopct=lambda p: f'{(p/100)*(received_sales+pending_sales):,.0f} LYD\n({p:.1f}%)' if p > 0 else '',
                     startangle=140, colors=['#2ecc71', '#e67e22'], textprops={'fontsize':9, 'weight':'bold'})
             ax1.set_title("Financial Cashflow Distribution (LYD)", fontsize=10, weight='bold', color='#5c2575', pad=15)
@@ -286,9 +285,9 @@ else:
             english_labels = []
             for label in status_counts.index:
                 lbl_clean = str(label).strip()
-                if 'تسليم' in lbl_clean or 'تم' in lbl_clean: english_labels.append('Delivered')
-                elif 'شحن' in lbl_clean or 'طريق' in lbl_clean: english_labels.append('Shipping')
-                elif 'تجهيز' in lbl_clean or 'انتظار' in lbl_clean: english_labels.append('Preparing')
+                if any(k in lbl_clean for k in ['تسليم', 'تم']): english_labels.append('Delivered')
+                elif any(k in lbl_clean for k in ['شحن', 'طريق']): english_labels.append('Shipping')
+                elif any(k in lbl_clean for k in ['تجهيز', 'انتظار']): english_labels.append('Preparing')
                 else: english_labels.append('Pending/Unspecified')
                 
             bars = ax2.bar(english_labels, status_counts.values, color=['#2ecc71' if x == 'Delivered' else '#e67e22' for x in english_labels], width=0.4, zorder=3)
@@ -298,88 +297,26 @@ else:
                 ax2.text(bar.get_x() + bar.get_width()/2.0, bar.get_height() + 0.05, f'{int(bar.get_height())}', ha='center', va='bottom', weight='bold')
             st.pyplot(fig2)
 
-    # --- 📊 4️⃣ لوحة صدارة الكتب: حصر الفلترة المباشرة على حالة "تسليم" فقط وتأمين لغة الـ Chart ---
+    # --- 📊 لوحة صدارة الكتب الأكثر طلباً بالحزمة الحركية ومسميات إنجليزية نقية دقيقة ---
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<div style='background:#117a65; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📈 لوحة صدارة مبيعات الكتب والعوائد المالية (للطلبيات المستلمة فقط) / Delivered Books Leaderboard</b></div>", unsafe_allow_html=True)
+    st.markdown("<div style='background:#117a65; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📈 لوحة صدارة الكتب الأكثر طلباً (حسب الوحدات المباعة والمستلمة فقط) / Most Requested Books Leaderboard</b></div>", unsafe_allow_html=True)
     
     book_columns = [c for c in clean_all.columns if "book type" in c.lower() or "نوع الكتاب" in c or "كتاب" in c]
     
-    if book_columns and not unique_all_period.empty:
-        # 🛡️ شبكة الأمان البرمجية: تصفية المنظومة لتأخذ فقط صفوف الطلبيات "المستلمة فعلياً"
-        delivered_only_orders = unique_all_period[unique_all_period[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)]
-        
+    if book_columns and not target_orders.empty:
         book_data_list = []
         for col_b in book_columns:
-            # استخراج اسم المنتج بالعربي بطريقة ذكية
             m_head = re.search(r'\[(.*?)\]', col_b)
             arabic_book_name = m_head.group(1).strip() if m_head else col_b.replace('Book type', '').strip()
             
-            # بناء اسم إنجليزي محترف ومقابل لاستخدامه داخل الـ Chart لمنع التقطع
-            english_chart_label = "Misc Item"
-            if "كبير" in arabic_book_name or "Large" in arabic_book_name: english_chart_label = "Large Book"
-            elif "وسط" in arabic_book_name or "Medium" in arabic_book_name: english_chart_label = "Medium Book"
-            elif "صغير" in arabic_book_name or "Small" in arabic_book_name: english_chart_label = "Small Book"
-            elif "مخمل" in arabic_book_name: english_chart_label = "Velvet Album"
-            elif "جلد" in arabic_book_name: english_chart_label = "Leather Album"
-            else: english_chart_label = arabic_book_name  # إذا كان الاسم هجين أو إنجليزي في الشيت أصلاً
-            
-            # 1. تجميع كميات الكتب المباعة داخل الطلبيات المستلمة فقط
-            total_qty = pd.to_numeric(delivered_only_orders[col_b], errors='coerce').fillna(0).sum()
-            
-            # 2. تجميع مجموع العوائد والأسعار المحصلة كاش من هذا النوع
-            total_revenue = delivered_only_orders[pd.to_numeric(delivered_only_orders[col_b], errors='coerce').fillna(0) > 0][p_col].sum()
-            
-            if total_qty > 0:
-                book_data_list.append({
-                    'Arabic Name': arabic_book_name,
-                    'Chart Label': english_chart_label,
-                    'Quantity': int(total_qty),
-                    'Revenue': total_revenue
-                })
-        
-        if book_data_list:
-            # ترتيب داتا فريم المنتجات تنازلياً (الأعلى كمية مبيعات مستلمة في الصدارة والمرتبة الأولى)
-            df_books = pd.DataFrame(book_data_list).sort_values(by='Quantity', ascending=False)
-            
-            col_chart_b, col_table_b = st.columns([3, 2])
-            
-            with col_chart_b:
-                fig3, ax3 = plt.subplots(figsize=(8, 4.5))
-                # الرسم البياني يقرأ التسمية الإنجليزية الآمنة لمنع تشوه الكتابة والخطوط العربية
-                bars3 = ax3.bar(df_books['Chart Label'], df_books['Quantity'], color='#117a65', width=0.35, zorder=3)
-                ax3.set_title("Delivered Books Volumes (Descending Leaderboard)", fontsize=10, weight='bold', color='#117a65', pad=15)
-                ax3.set_ylabel("Units Delivered (Pcs)", fontsize=9, weight='bold')
-                ax3.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
-                plt.xticks(rotation=15, ha='right', fontsize=8, weight='bold')
-                
-                for bar in bars3:
-                    ax3.text(bar.get_x() + bar.get_width()/2.0, bar.get_height() + 0.1, f'{int(bar.get_height())} Pcs', ha='center', va='bottom', weight='bold', color='#2c3e50', fontsize=8)
-                st.pyplot(fig3)
-                
-            with col_table_b:
-                # الجدول يعرض البيانات والأسماء بالعربية الفصحى الصحيحة والسليمة تماماً
-                sub_table_rows = ""
-                for idx_b, r_b in df_books.iterrows():
-                    sub_table_rows += f"""<tr>
-                    <td style='padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; color:#117a65;'>{r_b['Arabic Name']}</td>
-                    <td style='padding:10px; border-bottom:1px solid #eee; text-align:center; font-weight:bold; color:#2c3e50;'>{r_b['Quantity']} قطعة</td>
-                    <td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'><span style='background:#e8f8f5; color:#117a65; padding:4px 8px; border-radius:4px; font-weight:bold;'>{r_b['Revenue']:,.0f} LYD</span></td>
-                    </tr>"""
-                
-                html_book_table = f"""
-                <table style='width:100%; border-collapse:collapse; margin-top:25px; font-family:tahoma; direction:rtl; box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'>
-                    <thead>
-                        <tr style='background-color:#117a65; color:white;'>
-                            <th style='padding:12px; text-align:right;'>📚 نوع المنتج (بالعربية السليمة)</th>
-                            <th style='padding:12px; text-align:center;'>🔢 الكمية المستلمة</th>
-                            <th style='padding:12px; text-align:center;'>💰 صافي السيولة النقدية</th>
-                        </tr>
-                    </thead>
-                    <tbody>{sub_table_rows}</tbody>
-                </table>
-                """
-                st.markdown(html_book_table, unsafe_allow_html=True)
-        else:
-            st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لا توجد مبيعات مسجلة ومستلمة للكتب في هذا النطاق حالياً.</div>", unsafe_allow_html=True)
-    else:
-        st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>أعمدة مبيعات الكتب غير متوفرة في الملف حالياً.</div>", unsafe_allow_html=True)
+            # محرك فحص دقيق للكلمات المفتاحية في قوقل شيت وتحويلها إلى travel و wedding بالإنجليزية
+            name_lower = arabic_book_name.lower()
+            if "عرس" in name_lower or "زواج" in name_lower or "wedding" in name_lower:
+                english_chart_label = "Wedding Album"
+            elif "سفر" in name_lower or "سياحة" in name_lower or "travel" in name_lower:
+                english_chart_label = "Travel Album"
+            elif "مخمل" in name_lower or "velvet" in name_lower:
+                english_chart_label = "Velvet Album"
+            elif "جلد" in name_lower or "leather" in name_lower:
+                english_chart_label = "Leather Album"
+            elif "ك
