@@ -1,4 +1,4 @@
-  # -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -46,8 +46,8 @@ try:
     clean_ids = sorted([str(x).strip() for x in clean_all_temp[id_c].unique() if str(x).strip() != ''])
     clean_statuses = sorted([str(x).strip() for x in df[st_c].unique() if str(x).strip() != ''])
 except:
-    clean_ids = ['D-ORD-1', 'D-ORD-2']
-    clean_statuses = ['تسليم', 'قيد الشحن']
+    clean_ids = ['D-ORD-1', 'D-ORD-2', 'D-ORD-3', 'D-ORD-4', 'D-ORD-5', 'D-ORD-6']
+    clean_statuses = ['تسليم', 'قيد الشحن', 'قيد التجهيز', 'غير محدد / Unspecified']
     df = pd.DataFrame()
 
 # تصفية وتجهيز الأعمدة
@@ -194,31 +194,26 @@ else:
     st.markdown("<br>", unsafe_allow_html=True)
 
     grp_o = len(tbl.drop_duplicates(subset=[id_c]))
-    
-    mask_del_tbl = tbl[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)
-    tbl_del_u = tbl[mask_del_tbl].drop_duplicates(subset=[id_c])
-    grp_m = tbl_del_u[p_col].sum()
+    tbl_delivered_unique = tbl[tbl[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
+    grp_m = tbl_delivered_unique[p_col].sum()
 
-    mask_del_per = period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)
-    delivered_unique_period = period_data[mask_del_per].drop_duplicates(subset=[id_c])
-    pending_unique_period = period_data[~mask_del_per].drop_duplicates(subset=[id_c])
-    
+    delivered_unique_period = period_data[period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
+    pending_unique_period = period_data[~period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)].drop_duplicates(subset=[id_c])
     received_sales = delivered_unique_period[p_col].sum()
     pending_sales = pending_unique_period[p_col].sum()
 
     clean_time_display = clean_emojis_for_chart(selected_time)
 
-    ban3_html = "<div style='background:#5c2575; padding:10px; color:white; "
-    ban3_html += "text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>"
-    ban3_html += f"📋 كشف أداء حزمة: {selected_status} ({clean_time_display}) | العدد: {grp_o} | القيمة المستلمة: {grp_m:,} LYD 💰</div>"
-    st.markdown(ban3_html, unsafe_allow_html=True)
+    # 1️⃣ التقرير الأول: كشف التدفق النقدي الفوري
+    st.markdown(f"<div style='background:#5c2575; padding:10px; color:white; text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>📋 كشف أداء الحزمة الحالية المستهدفة: {selected_status} ({clean_time_display}) | العدد: {grp_o} | القيمة المستلمة للحزمة: {grp_m:,} LYD 💰</div>", unsafe_allow_html=True)
     
     col_kpi1, col_kpi2 = st.columns(2)
     with col_kpi1:
-        st.markdown(f"<div style='background:#2ecc71; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>💵 إجمالي السيولة المستلمة بالخزينة:<br><span style='font-size:20px;'>{received_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#2ecc71; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>💵 إجمالي السيولة المستلمة بالخزينة (للنطاق الحالي):<br><span style='font-size:20px;'>{received_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
     with col_kpi2:
-        st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ إجمالي أرباح معلقة في التوصيل:<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ إجمالي أرباح معلقة في التوصيل (للنطاق الحالي):<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
 
+    # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي
     st.markdown("<br><div style='background:#2c3e50; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>💎 لوحة التقارير المالية التفصيلية لطلبيات الحزمة / Detailed Financial Statement</b></div>", unsafe_allow_html=True)
     
     table_rows = ""
@@ -243,131 +238,18 @@ else:
         books_summary_str = " + ".join(row_books) if row_books else "مبيعات متنوعة / Misc Items"
         price_display = f"{order_price:,.0f} LYD" if order_price > 0 else "⚠️ 0 LYD"
 
-        t_row_block = f"<tr><td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'> " \
-                      f"<span style='background:#eaf2f8; color:#2471a3; padding:4px 8px; border-radius:4px; font-weight:bold;'>{order_code}</span></td>" \
+        table_rows += f"<tr>" \
+                      f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'><span style='background:#eaf2f8; color:#2471a3; padding:4px 8px; border-radius:4px; font-weight:bold;'>{order_code}</span></td>" \
                       f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold;'>{customer_name}</td>" \
                       f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:right; color:#5c2575; font-weight:bold;'>{books_summary_str}</td>" \
-                      f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'> " \
-                      f"<span style='background:#e8f8f5; color:#117a65; padding:4px 8px; border-radius:4px; font-weight:bold;'>{price_display}</span></td></tr>"
-        table_rows += t_row_block
+                      f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'><span style='background:#e8f8f5; color:#117a65; padding:4px 8px; border-radius:4px; font-weight:bold;'>{price_display}</span></td>" \
+                      f"</tr>"
     
     if not target_orders.empty:
-        total_html_row = "<tr style='background-color:#ebdef0; font-weight:bold; color:#5c2575;'>" \
-                         "<td colspan='3' style='padding:12px; text-align:right;'>📊 إجمالي صافي إيرادات الخزينة الكلية لهذه الحزمة</td>" \
-                         f"<td style='padding:12px; text-align:center;'><span style='background:#7d3c98; color:white; padding:5px 12px; border-radius:4px;'>{grand_total_rev:,.0f} LYD</span></td></tr>"
+        total_html_row = f"<tr style='background-color:#ebdef0; font-weight:bold; color:#5c2575;'>" \
+                         f"<td colspan='3' style='padding:12px; text-align:right;'>📊 إجمالي صافي إيرادات الخزينة الكلية لهذه الحزمة</td>" \
+                         f"<td style='padding:12px; text-align:center;'><span style='background:#7d3c98; color:white; padding:5px 12px; border-radius:4px;'>{grand_total_rev:,.0f} LYD</span></td>" \
+                         f"</tr>"
         
-        tbl_head = "<table style='width:100%; border-collapse:collapse; margin-top:10px; font-family:tahoma; direction:rtl; " \
-                   "box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'><thead>" \
-                   "<tr style='background-color:#5c2575; color:white;'> " \
-                   "<th style='padding:12px; text-align:right;'>🆔 كود الطلبية</th>" \
-                   "<th style='padding:12px; text-align:right;'>👤 اسم الزبون</th>" \
-                   "<th style='padding:12px; text-align:right;'>📚 مواصفات الحزمة</th>" \
-                   "<th style='padding:12px; text-align:center;'>💰 إجمالي السعر</th></tr></thead>"
-        tbl_final = f"{tbl_head}<tbody>{table_rows}{total_html_row}</tbody></table>"
-        st.markdown(tbl_final, unsafe_allow_html=True)
-    else:
-        st.markdown("لا توجد طلبيات مسجلة في هذا النطاق حالياً.")
-
-    st.markdown("<br><div style='background:#5c2575; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📊 الرسوم البيانية والتحليلات المتقدمة للمبيعات / Executive Visual Analytics</b></div>", unsafe_allow_html=True)
-    col_chart1, col_chart2 = st.columns(2)
-    
-    with col_chart1:
-        if received_sales > 0 or pending_sales > 0:
-            fig1, ax1 = plt.subplots(figsize=(6, 4))
-            ax1.pie([received_sales, pending_sales], labels=['Received Cash', 'Pending Cash'], 
-                    autopct=lambda p: f'{(p/100)*(received_sales+pending_sales):,.0f} LYD\n({p:.1f}%)' if p > 0 else '',
-                    startangle=140, colors=['#2ecc71', '#e67e22'], textprops={'fontsize':9, 'weight':'bold'})
-            ax1.set_title("Financial Cashflow Distribution (LYD)", fontsize=10, weight='bold', color='#5c2575', pad=15)
-            st.pyplot(fig1)
-            plt.close(fig1)
-            
-    with col_chart2:
-        raw_counts = period_data.drop_duplicates(subset=[id_c])[st_c].replace('', 'Other')
-        status_counts = raw_counts.apply(clean_emojis_for_chart).value_counts()
-        if not status_counts.empty:
-            fig2, ax2 = plt.subplots(figsize=(6, 4))
-            english_labels = []
-            for label in status_counts.index:
-                lbl_clean = str(label).strip()
-                if any(k in lbl_clean for k in ['تسليم', 'تم']): english_labels.append('Delivered')
-                elif any(k in lbl_clean for k in ['شحن', 'طريق']): english_labels.append('Shipping')
-                elif any(k in lbl_clean for k in ['تجهيز', 'انتظار']): english_labels.append('Preparing')
-                else: english_labels.append('Pending/Unspecified')
-                
-            bars = ax2.bar(english_labels, status_counts.values, color=['#2ecc71' if x == 'Delivered' else '#e67e22' for x in english_labels], width=0.4, zorder=3)
-            ax2.set_title("Operational Workspace Load (Orders Count)", fontsize=10, weight='bold', color='#5c2575', pad=15)
-            ax2.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
-            st.pyplot(fig2)
-            plt.close(fig2)
-
-    # --- 📊 4️⃣ لوحة صدارة الكتب الأكثر طلباً (محصورة بشكل دائم ومطلق على حالة "تسليم" فقط) ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<div style='background:#117a65; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>📈 لوحة صدارة الكتب الأكثر طلباً (حسب الوحدات المباعة والمستلمة فقط) / Most Requested Books Leaderboard</b></div>", unsafe_allow_html=True)
-    
-    book_columns = [c for c in clean_all.columns if "book type" in c.lower() or "نوع الكتاب" in c or "كتاب" in c]
-    
-    if book_columns and not period_data.empty:
-        # 🛡️ الحصر الحديدي النهائي: محرك لوحة الصدارة يفرز فقط صفوف الطلبيات المستلمة كاش فعلياً في النطاق الزمني الحالي
-        mask_delivered_strict = period_data[st_c].str.contains('تسليم|تم|Done|Delivered|مستلم', na=False, case=False)
-        strict_delivered_orders = period_data[mask_delivered_strict].drop_duplicates(subset=[id_c])
-        
-        book_data_list = []
-        kw = ["عرس", "زواج", "wedding", "سفر", "سياحة", "travel", "مخمل", "velvet", "جلد", "leather", "كبير", "large", "وسط", "medium", "صغير", "small"]
-        en = ["Wedding Album", "Wedding Album", "Wedding Album", "Travel Album", "Travel Album", "Travel Album", "Velvet Album", "Velvet Album", "Leather Album", "Leather Album", "Large Book", "Large Book", "Medium Book", "Medium Book", "Small Book", "Small Book"]
-        
-        for col_b in book_columns:
-            m_head = re.search(r'\[(.*?)\]', col_b)
-            arabic_book_name = m_head.group(1).strip() if m_head else col_b.replace('Book type', '').strip()
-            
-            name_lower = arabic_book_name.lower()
-            english_chart_label = "Custom Album"
-            
-            for k_word, e_label in zip(kw, en):
-                if k_word in name_lower:
-                    english_chart_label = e_label
-                    break
-            
-            # حساب كميات القطع المباعة والمستلمة فعلياً فقط (تجريد تام من المبالغ المالية)
-            total_qty = pd.to_numeric(strict_delivered_orders[col_b], errors='coerce').fillna(0).sum()
-            
-            if total_qty > 0:
-                book_data_list.append({
-                    'Arabic Name': arabic_book_name,
-                    'Chart Label': english_chart_label,
-                    'Quantity': int(total_qty)
-                })
-        
-        if book_data_list:
-            df_books = pd.DataFrame(book_data_list).sort_values(by='Quantity', ascending=False)
-            col_chart_b, col_table_b = st.columns([3, 2])
-            
-            with col_chart_b:
-                fig3, ax3 = plt.subplots(figsize=(8, 4.5))
-                bars3 = ax3.bar(df_books['Chart Label'], df_books['Quantity'], color='#117a65', width=0.35, zorder=3)
-                ax3.set_title("Delivered Book Volumes (Highest Demand Leaderboard)", fontsize=10, weight='bold', color='#117a65', pad=15)
-                ax3.set_ylabel("Units Delivered (Pcs)", fontsize=9, weight='bold')
-                ax3.grid(axis='y', linestyle='--', alpha=0.5, zorder=0)
-                plt.xticks(rotation=15, ha='right', fontsize=8, weight='bold')
-                
-                for bar in bars3:
-                    ax3.text(bar.get_x() + bar.get_width()/2.0, bar.get_height() + 0.1, f'{int(bar.get_height())} Pcs', ha='center', va='bottom', weight='bold', color='#2c3e50', fontsize=8)
-                st.pyplot(fig3)
-                plt.close(fig3)
-                
-            with col_table_b:
-                sub_table_rows = ""
-                for idx_b, r_b in df_books.iterrows():
-                    sub_table_rows += f"<tr><td style='padding:12px; border-bottom:1px solid #eee; text-align:right; font-weight:bold; color:#117a65;'>{r_b['Arabic Name']}</td>" \
-                                      f"<td style='padding:12px; border-bottom:1px solid #eee; text-align:center; font-weight:bold; color:#2c3e50;'>{r_b['Quantity']} قطعة</td></tr>"
-                
-                tbl_b_head = "<table style='width:100%; border-collapse:collapse; margin-top:25px; font-family:tahoma; direction:rtl; " \
-                             "box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'><thead>" \
-                             "<tr style='background-color:#117a65; color:white;'> " \
-                             "<th style='padding:12px; text-align:right;'>📚 نوع المنتج الأكثر طلباً</th>" \
-                             "<th style='padding:12px; text-align:center;'>🔢 إجمالي كمية المبيعات</th></tr></thead>"
-                tbl_b_final = f"{tbl_b_head}<tbody>{sub_table_rows}</tbody></table>"
-                st.markdown(tbl_b_final, unsafe_allow_html=True)
-        else:
-            st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>لا توجد كميات كتب مسلمة ومباعة في هذا النطاق الزمني حالياً.</div>", unsafe_allow_html=True)
-    else:
-        st.markdown("<div style='text-align:right; color:#7f8c8d; padding:15px; background:#fff; border:1px solid #eee; margin-top:10px;'>أعمدة مبيعات الكتب غير متوفرة في الملف حالياً.</div>", unsafe_allow_html=True)
+        tbl_head = "<table style='width:100%; border-collapse:collapse; margin-top:10px; font-family:tahoma; direction:rtl; box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'><thead>" \
+                   "<tr style='background-color:#5c25
