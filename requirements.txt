@@ -4,3 +4,5 @@ openpyxl
 matplotlib
 arabic-reshaper
 python-bidi
+arabic-reshaper
+python-bidi
