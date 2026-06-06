@@ -46,8 +46,8 @@ try:
     clean_ids = sorted([str(x).strip() for x in clean_all_temp[id_c].unique() if str(x).strip() != ''])
     clean_statuses = sorted([str(x).strip() for x in df[st_c].unique() if str(x).strip() != ''])
 except:
-    clean_ids = ['D-ORD-1', 'D-ORD-2', 'D-ORD-3', 'D-ORD-4', 'D-ORD-5', 'D-ORD-6']
-    clean_statuses = ['تسليم', 'قيد الشحن', 'قيد التجهيز', 'غير محدد / Unspecified']
+    clean_ids = ['D-ORD-1', 'D-ORD-2']
+    clean_statuses = ['تسليم', 'قيد الشحن']
     df = pd.DataFrame()
 
 # تصفية وتجهيز الأعمدة
@@ -84,15 +84,17 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-header_html = "<div style='background-color:#2c3e50; padding:15px; "
-header_html += "border-radius:10px; text-align:center; color:white; "
-header_html += "margin-bottom:20px;'><h2>📊 لوحة التحكم التنفيذية - متجر ذكريات الفاخر</h2></div>"
-st.markdown(header_html, unsafe_allow_html=True)
+st.markdown("""
+<div style='background-color:#2c3e50; padding:15px; border-radius:10px; text-align:center; color:white; font-family:tahoma; margin-bottom:20px;'>
+    <h2>📊 لوحة التحكم التنفيذية - متجر ذكريات الفاخر</h2>
+</div>
+""", unsafe_allow_html=True)
 
-sidebar_html = "<div style='background-color:#5c2575; padding:8px; "
-sidebar_html += "color:white; text-align:center; font-weight:bold; "
-sidebar_html += "border-radius:4px;'>⚙️ لوحة الفرز والملاحة / Control Panel</div>"
-st.sidebar.markdown(sidebar_html, unsafe_allow_html=True)
+st.sidebar.markdown("""
+<div style='background-color:#5c2575; padding:8px; color:white; text-align:center; font-weight:bold; border-radius:4px;'>
+    ⚙️ لوحة الفرز والملاحة / Control Panel
+</div>
+""", unsafe_allow_html=True)
 
 mode = st.sidebar.radio(
     "اختر وضع العرض المطلوب / Select View Mode:",
@@ -110,16 +112,17 @@ if 'Single' in mode:
     unique_delivered = clean_all[delivered_global_mask].drop_duplicates(subset=[id_c])
     tot_m = unique_delivered[p_col].sum()
     
-    ban1_html = "<div style='background:linear-gradient(135deg, #5c2575, #7d3c98); "
-    ban1_html += "padding:14px; color:white; text-align:right; border-radius:8px; "
-    ban1_html += "box-shadow:0 4px 10px rgba(0,0,0,0.1);'>"
-    ban1_html += f"<b>📊 إجمالي الطلبات الفريدة: {tot_o} | 💰 مبيعات الخزينة الكلية المحققة: {tot_m:,} LYD</b></div>"
-    st.markdown(ban1_html, unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style='background:linear-gradient(135deg, #5c2575, #7d3c98); padding:14px; color:white; text-align:right; font-family:tahoma; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1);'>
+        <b>📊 إجمالي الطلبات الفريدة: {tot_o} | 💰 مبيعات الخزينة الكلية المحققة: {tot_m:,} LYD</b>
+    </div>
+    """, unsafe_allow_html=True)
     
-    ban2_html = "<div style='background:#2c3e50; padding:10px; color:white; "
-    ban2_html += "text-align:right; margin-top:10px; border-radius:6px;'> "
-    ban2_html += f"<b>📌 تفاصيل كود الطلب الحالي: {selected_id}</b></div>"
-    st.markdown(ban2_html, unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style='background:#2c3e50; padding:10px; color:white; text-align:right; margin-top:10px; border-radius:6px; font-family:tahoma;'>
+        <b>📌 تفاصيل كود الطلب الحالي: {selected_id}</b>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
     
     matching_rows = df[df[id_c].fillna('').astype(str).str.strip() == str(selected_id).strip()]
@@ -151,11 +154,13 @@ if 'Single' in mode:
                 fsz = '14px' if col == p_col else '13px'
                 val_element = f"<span style='color:{clr}; font-weight:bold; font-size:{fsz}; font-family:tahoma;'>{v_str}</span>"
             
-            card_layout = f"<div style='direction: ltr; text-align: left; padding: 12px 16px; margin-bottom: 8px; background: #ffffff; border-left: 5px solid #5c2575; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center;'>" \
-                          f"<div style='font-size: 16px; margin-right: 12px;'>{ico}</div>" \
-                          f"<div style='min-width: 220px; color: #7f8c8d; font-weight: bold; font-family: tahoma; font-size: 13px;'>{clean_display_header}</div>" \
-                          f"<div style='flex-grow: 1;'>{val_element}</div></div>"
-            st.markdown(card_layout, unsafe_allow_html=True)
+            st.markdown(f"""
+            <div style="direction: ltr; text-align: left; padding: 12px 16px; margin-bottom: 8px; background: #ffffff; border-left: 5px solid #5c2575; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center;">
+                <div style="font-size: 16px; margin-right: 12px;">{ico}</div>
+                <div style="min-width: 220px; color: #7f8c8d; font-weight: bold; font-family: tahoma; font-size: 13px;">{clean_display_header}</div>
+                <div style="flex-grow: 1;">{val_element}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
 else:
     selected_status = st.sidebar.selectbox("اختر حالة المجموعة بالتصفية / Filter by Status:", clean_statuses)
@@ -204,52 +209,14 @@ else:
 
     clean_time_display = clean_emojis_for_chart(selected_time)
 
-    # 1️⃣ التقرير الأول: كشف التدفق النقدي الفوري
-    st.markdown(f"<div style='background:#5c2575; padding:10px; color:white; text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>📋 كشف أداء الحزمة الحالية المستهدفة: {selected_status} ({clean_time_display}) | العدد: {grp_o} | القيمة المستلمة للحزمة: {grp_m:,} LYD 💰</div>", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style='background:#5c2575; padding:10px; color:white; text-align:right; font-family:tahoma; border-radius:6px; font-weight:bold;'>
+        📋 كشف أداء حزمة: {selected_status} ({clean_time_display}) | العدد: {grp_o} | القيمة المستلمة: {grp_m:,} LYD 💰
+    </div>
+    """, unsafe_allow_html=True)
     
     col_kpi1, col_kpi2 = st.columns(2)
     with col_kpi1:
-        st.markdown(f"<div style='background:#2ecc71; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>💵 إجمالي السيولة المستلمة بالخزينة (للنطاق الحالي):<br><span style='font-size:20px;'>{received_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#2ecc71; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>💵 إجمالي السيولة المستلمة بالخزينة:<br><span style='font-size:20px;'>{received_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
     with col_kpi2:
-        st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-top:8px;'><b>⏳ إجمالي أرباح معلقة في التوصيل (للنطاق الحالي):<br><span style='font-size:20px;'>{pending_sales:,} LYD</span></b></div>", unsafe_allow_html=True)
-
-    # 2️⃣ التقرير الثاني: جدول الأستاذ المالي التفصيلي
-    st.markdown("<br><div style='background:#2c3e50; padding:6px; color:white; text-align:center; font-family:tahoma; border-radius:4px;'><b>💎 لوحة التقارير المالية التفصيلية لطلبيات الحزمة / Detailed Financial Statement</b></div>", unsafe_allow_html=True)
-    
-    table_rows = ""
-    grand_total_rev = 0
-    target_orders = tbl.drop_duplicates(subset=[id_c])
-
-    for idx, row in target_orders.iterrows():
-        order_code = str(row[id_c]).strip()
-        customer_name = str(row[name_col]).strip() if name_col and pd.notna(row[name_col]) else "—"
-        order_price = row[p_col]
-        grand_total_rev += order_price
-
-        row_books = []
-        for col_b in clean_all.columns:
-            if "Book type" in col_b or "نوع الكتاب" in col_b:
-                b_val = str(row[col_b]).strip()
-                if b_val not in ["0", "0.0", "0.00", "", "—", "nan", "NaN"]:
-                    m_head = re.search(r'\[(.*?)\]', col_b)
-                    b_title = m_head.group(1).strip() if m_head else col_b
-                    row_books.append(f"{b_title} ({int(float(b_val))})")
-
-        books_summary_str = " + ".join(row_books) if row_books else "مبيعات متنوعة / Misc Items"
-        price_display = f"{order_price:,.0f} LYD" if order_price > 0 else "⚠️ 0 LYD"
-
-        table_rows += f"<tr>" \
-                      f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:right;'><span style='background:#eaf2f8; color:#2471a3; padding:4px 8px; border-radius:4px; font-weight:bold;'>{order_code}</span></td>" \
-                      f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:right; font-weight:bold;'>{customer_name}</td>" \
-                      f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:right; color:#5c2575; font-weight:bold;'>{books_summary_str}</td>" \
-                      f"<td style='padding:10px; border-bottom:1px solid #eee; text-align:center;'><span style='background:#e8f8f5; color:#117a65; padding:4px 8px; border-radius:4px; font-weight:bold;'>{price_display}</span></td>" \
-                      f"</tr>"
-    
-    if not target_orders.empty:
-        total_html_row = f"<tr style='background-color:#ebdef0; font-weight:bold; color:#5c2575;'>" \
-                         f"<td colspan='3' style='padding:12px; text-align:right;'>📊 إجمالي صافي إيرادات الخزينة الكلية لهذه الحزمة</td>" \
-                         f"<td style='padding:12px; text-align:center;'><span style='background:#7d3c98; color:white; padding:5px 12px; border-radius:4px;'>{grand_total_rev:,.0f} LYD</span></td>" \
-                         f"</tr>"
-        
-        tbl_head = "<table style='width:100%; border-collapse:collapse; margin-top:10px; font-family:tahoma; direction:rtl; box-shadow:0 4px 12px rgba(0,0,0,0.05); border-radius:6px; overflow:hidden;'><thead>" \
-                   "<tr style='background-color:#5c25
+        st.markdown(f"<div style='background:#e67e22; padding:15px; color:white; border-radius:6px; text-align:right; box-shadow:0 2px 4px rgba(0,0,0
